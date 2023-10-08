@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+</head>
+<body>
+<script src="../lib/index.js"></script>
+<script>
+    const yaml = `
+ meta:
+   name: test  #注释
+   namespace: default
+   age: NaN
+ `;
+    const form2Yaml = new Form2Yaml(yaml, {
+        rules:{
+            'meta.age': [ {pattern: /^\d+$/, message: '年龄必须为数字'}]
+        }
+    });
+
+    form2Yaml.validate().then(_ =>{
+        console.log('校验通过')
+    }).catch(err => {
+        console.log('校验失败')
+        console.log(err)
+    })
+
+
+
+ // const form2Yaml = new Form2Yaml(`
+ // meta:
+ //   name: test  #注释
+ //   namespace: default
+ // `,{
+ //     rules:{
+ //         'meta.name':[
+ //             {required: true},
+ //             {pattern: /^.{1,10}$/}
+ //         ]
+ //     }
+ // });
+ //
+ // console.log(form2Yaml.getYaml())
+ // console.log(form2Yaml.getJson())
+ //
+ // form2Yaml.setJson({
+ //     meta:{
+ //         name: '李玉林2222',
+ //     }
+ // })
+ // console.log(form2Yaml.getYaml())
+ //
+ //
+ // form2Yaml.setYaml(`
+ // meta:
+ //   name: test88888888888  #注释
+ //   namespace: default
+ //   #注释
+ //   description: 描述信息
+ // `)
+ //
+ // console.log(form2Yaml.getYaml())
+ // console.log(form2Yaml.getJson())
+ //
+ //
+ //
+ // form2Yaml.validate().then(_=>{
+ //     console.log('校验成功')
+ // }).catch((errors, fields)=>{
+ //     console.log('校验失败', errors)
+ //     console.log(fields)
+ // })
+ // console.log(new Date())
+</script>
+</body>
+</html>

@@ -1,0 +1,40 @@
+{
+  "name": "form2yaml",
+  "version": "1.0.2",
+  "description": "实现Form表单和Yaml数据的转换，支持保留Yaml注释，支持Yaml数据校验，支持Form的key与Yaml的key映射",
+  "main": "lib/index.js",
+  "type": "module",
+  "files": [
+    "lib/",
+    "demo/",
+    "src/"
+  ],
+  "scripts": {
+    "test": "jest",
+    "start": "watchify --debug src/index.js -s Form2Yaml -t [ babelify --sourceMapRelative . ] --outfile lib/index.js",
+    "build": "browserify --debug src/index.js -s Form2Yaml -t [ babelify --sourceMapRelative . ] --outfile lib/index.js"
+  },
+  "devDependencies": {
+    "babel": "^5.8.23",
+    "babelify": "^6.3.0",
+    "browserify": "^16.5.1",
+    "jest": "^29.6.1",
+    "watchify": "^4.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/501351981/form2yaml.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/501351981/form2yaml/issues"
+  },
+  "homepage": "https://github.com/501351981/form2yaml#readme",
+  "dependencies": {
+    "async-validator": "^4.2.5",
+    "js-yaml": "^4.1.0",
+    "lodash": "^4.17.21",
+    "yaml-js": "^0.3.1"
+  }
+}
