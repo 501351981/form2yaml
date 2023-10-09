@@ -180,7 +180,7 @@ function getTag(json) {
  * @returns {string}
  *
 */
-function updateSeq(ast, newJson, yaml, offset) {
+function updateSeq(ast, newJson, yaml, offset, keyNode) {
   let values = load(serialize(ast));
   let min = Math.min(values.length, newJson.length);
   for (let i = 0; i < min; i++) {
@@ -196,7 +196,7 @@ function updateSeq(ast, newJson, yaml, offset) {
       yaml = newYaml;
     }
   } else if (newJson.length > min) {
-    yaml = insertAfterNode(ast, cleanDump(newJson.slice(min)), yaml, offset);
+    yaml = insertAfterNode(ast, cleanDump(newJson.slice(min)), yaml, offset, keyNode);
   }
 
   return yaml;
@@ -212,11 +212,13 @@ function updateSeq(ast, newJson, yaml, offset) {
  * @returns {boolean}
  * @throws {YAWNError} - if json has weird type
 */
-function updateMap(ast, newJson, json, yaml, offset) {
+function updateMap(ast, newJson, json, yaml, offset, keyNode) {
   // look for changes
+  console.log('===updateMap====', 'ast=>', ast, 'newJson=>', newJson , 'json=>', json, 'yaml=>', yaml, 'offset=>', offset)
   each(ast.value, pair => {
     let [keyNode, valNode] = pair;
 
+    console.log('keyNode.value =>', 'keyNode=>', keyNode, 'valNode=>', valNode)
     // node is deleted
     if (isUndefined(newJson[keyNode.value])) {
 
@@ -240,6 +242,8 @@ function updateMap(ast, newJson, json, yaml, offset) {
     let value = json[keyNode.value];       //老json的值
     let newValue = newJson[keyNode.value]; //新json的值
 
+    console.log('value', value, 'newValue', newValue)
+
     // primitive value has changed
     //valNode.value不是对象，说明是普通值：数字、字符串、布尔值
     if (newValue !== value && !isArray(valNode.value)) {
@@ -258,9 +262,17 @@ function updateMap(ast, newJson, json, yaml, offset) {
 
       // array value has changed
       if (isArray(newValue)) {
-
+        if(valNode.value.length === 0){
+          console.log('之前的yaml=>', yaml)
+          let reg = /\[[\s\S]*?\]$/m;
+          let emptyObjectStr = yaml.match(reg);
+          if (emptyObjectStr){
+            yaml = yaml.replace(/\[[\s\S]*?\]$/m, '');
+            offset -= emptyObjectStr[0].length;
+          }
+        }
         // recurse
-        const newYaml = updateSeq(valNode, newValue, yaml, offset);
+        const newYaml = updateSeq(valNode, newValue, yaml, offset, keyNode);
         offset = offset + newYaml.length - yaml.length;
         yaml = newYaml;
 
@@ -268,7 +280,19 @@ function updateMap(ast, newJson, json, yaml, offset) {
       } else {
 
         // recurse
-        const newYaml = updateMap(valNode, newValue, value, yaml, offset);
+        if(valNode.value.length === 0){
+          console.log('之前的yaml=>', yaml)
+          let reg = /\{[\s\S]*?\}$/m;
+          let emptyObjectStr = yaml.match(reg);
+          if (emptyObjectStr){
+            yaml = yaml.replace(/\{[\s\S]*?\}$/m, '');
+            offset -= emptyObjectStr[0].length;
+          }
+        }
+
+        const newYaml = updateMap(valNode, newValue, value, yaml, offset, keyNode);
+        console.log('===这里1===', newYaml)
+        console.log('详细', valNode, newValue, value, yaml, offset)
         offset = offset + newYaml.length - yaml.length;
         yaml = newYaml;
 
@@ -283,12 +307,13 @@ function updateMap(ast, newJson, json, yaml, offset) {
 
   // look for new items to add
   each(newJson, (value, key)=> {
-
+    console.log('===>each,newJson=>', newJson, 'value=>', value, 'yaml=>', yaml)
     // item is new
     if (isUndefined(json[key])) {
       let newValue = cleanDump({[key]: value});
 
-      const newYaml = insertAfterNode(ast, newValue, yaml, offset);
+      console.log('isUndefined newValue=>', newValue)
+      const newYaml = insertAfterNode(ast, newValue, yaml, offset, keyNode);
       offset = offset + newYaml.length - yaml.length;
       yaml = newYaml;
     }
@@ -343,8 +368,13 @@ function replaceNode(node, value, yaml, offset) {
  *
  * @returns {string}
 */
-function insertAfterNode(node, value, yaml, offset) {
+function insertAfterNode(node, value, yaml, offset, keyNode) {
   let indentedValue = indent(value, node.start_mark.column);
+  if(isArray(node.value) && node.value.length === 0 && keyNode){
+    indentedValue = indent(value, keyNode.start_mark.column + 2);
+  }
+
+  console.log('insertAfterNode','node=>', node, isArray(node.value), 'value=>', value, 'yaml=>', yaml, 'indentedValue=>', indentedValue)
 
   return yaml.substr(0, getNodeEndMark(node).pointer + offset) +
     EOL +
@@ -420,6 +450,7 @@ function getNodeEndMark(ast) {
  * @returns {string}
 */
 function indent(str, depth) {
+  console.log('indent=>', typeof str,'str=>', str, 'depth=>', depth)
   return str
     .split(EOL)
     .filter(line => line)
