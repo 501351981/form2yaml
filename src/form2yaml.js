@@ -121,13 +121,18 @@ Form2Yaml.prototype.ignoreExtraJsonKey = function (sourceData, yamlJsonData){
         })
     }
 }
-Form2Yaml.prototype.syncMissingDataToSource = function (sourceData, yamlJsonData){
+Form2Yaml.prototype.syncMissingDataToSource = function (sourceData, yamlJsonData, parentKey){
+    let controlledYamlKey = this.options.controlledYamlKey || [];
     if(isObject(yamlJsonData)){
         Object.keys(yamlJsonData).forEach(key => {
+            let fullKey = parentKey ? `${parentKey}.${key}` : key;
+            if(controlledYamlKey.includes(fullKey)){
+                return
+            }
             if(!has(sourceData, key)){
                 set(sourceData, key, yamlJsonData[key])
             }else if(isObject(sourceData[key]) && isObject(yamlJsonData[key])){
-                this.syncMissingDataToSource(sourceData[key], yamlJsonData[key])
+                this.syncMissingDataToSource(sourceData[key], yamlJsonData[key], fullKey)
             }
         })
     }

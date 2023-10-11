@@ -389,4 +389,18 @@ describe("setJson", () => {
         ].join('\n');
         expect(form2yaml.getYaml().trim()).toEqual(yaml)
     })
+    it("原来某个子属性是对象，后来设为多行字符", ()=> {
+        let form2yaml = new Form2Yaml('a:\n  b: 1', {
+            ignoreMissing: true,
+            controlledYamlKey: ['a']
+        })
+        form2yaml.setJson({
+            a: {}
+        })
+
+        let yaml = [
+            'a: {}'
+        ].join('\n');
+        expect(form2yaml.getYaml().trim()).toEqual(yaml)
+    })
 })
