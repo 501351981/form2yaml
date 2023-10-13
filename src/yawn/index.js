@@ -18,8 +18,6 @@ import {
 } from 'lodash';
 
 import YAWNError from './error.js';
-import {trim} from "lodash/string.js";
-
 const NULL_TAG = 'tag:yaml.org,2002:null';
 const STR_TAG = 'tag:yaml.org,2002:str';
 const INT_TAG = 'tag:yaml.org,2002:int';
@@ -177,27 +175,27 @@ function getTag(json) {
  *
 */
 function updateSeq(ast, newJson, yaml, offset, keyNode) {
-  console.log('updateSeq ast==>', ast)
-  console.log('updateSeq newJson==>', newJson)
-  console.log('updateSeq yaml, offset, keyNode==>', yaml, offset, keyNode)
+  console.log('updateSeq ast==>', ast);
+  console.log('updateSeq newJson==>', newJson);
+  console.log('updateSeq yaml, offset, keyNode==>', yaml, offset, keyNode);
 
   let values = load(serialize(ast));
-  console.log('values', values)
+  console.log('values', values);
   let min = Math.min(values.length, newJson.length);
   for (let i = 0; i < min; i++) {
-    console.log('node i=>', ast.value[i])
+    console.log('node i=>', ast.value[i]);
     let valNode = ast.value[i];
     let value = values[i];
     let newValue = newJson[i];
-    console.log('value, newValue', value, newValue)
+    console.log('value, newValue', value, newValue);
     if(newValue === value){
       continue;
     }
 
     //两个都是数组
     if(isArray(newValue) && isArray(value)){
-      console.log('递归 updateSeq')
-      const newYaml =  updateSeq(valNode, newValue, yaml, offset, valNode)
+      console.log('递归 updateSeq');
+      const newYaml = updateSeq(valNode, newValue, yaml, offset, valNode);
       offset = offset + newYaml.length - yaml.length;
       yaml = newYaml;
       continue;
@@ -206,8 +204,8 @@ function updateSeq(ast, newJson, yaml, offset, keyNode) {
     //两个都是对象
     if(isObject(newValue) && !isArray(newValue) && isObject(value) && !isArray(value)){
       //都是对象
-      console.log('递归对象')
-      const newYaml =  updateMap(valNode, newValue, value, yaml, offset, valNode)
+      console.log('递归对象');
+      const newYaml = updateMap(valNode, newValue, value, yaml, offset, valNode);
       offset = offset + newYaml.length - yaml.length;
       yaml = newYaml;
       continue;
@@ -241,17 +239,17 @@ function updateSeq(ast, newJson, yaml, offset, keyNode) {
     }
   } else if (newJson.length > min) {
     //移动到末尾
-    console.log('insertAfterNode=====>', offset)
-    console.log( yaml)
-    console.log('剩余yaml')
-    console.log(yaml.substring(getNodeEndMark(ast).pointer + offset))
+    console.log('insertAfterNode=====>', offset);
+    console.log( yaml);
+    console.log('剩余yaml');
+    console.log(yaml.substring(getNodeEndMark(ast).pointer + offset));
 
     let tailYaml = yaml.substring(getNodeEndMark(ast).pointer + offset);
     if(tailYaml){
       let arr = tailYaml.split(EOL);
       for(let i = 0; i < arr.length; i++){
         if(arr[i].trim().startsWith('#')){
-          offset += arr[i].length + 1
+          offset += arr[i].length + 1;
         }else{
           break;
         }
@@ -293,10 +291,10 @@ function updateMap(ast, newJson, json, yaml, offset, keyNode) {
       //删除不存在的节点数据
       //被删除节点之前的 + 被删除节点之后的
       //修改偏移量，删除偏移量减少
-      let newYaml = yaml.substr(0, keyNode.start_mark.pointer + offset)
+      let newYaml = yaml.substr(0, keyNode.start_mark.pointer + offset);
 
       //如果后面没有任何内容，只剩一个空行，则删除这个空行
-      let lineBreak =  yaml[getNodeEndMark(valNode).pointer + offset] === '\n'
+      let lineBreak = yaml[getNodeEndMark(valNode).pointer + offset] === '\n';
       if(lineBreak){
         newYaml = newYaml.trimRight() + '\n' + yaml.substring(getNodeEndMark(valNode).pointer + offset +1);
       }else{
@@ -310,7 +308,7 @@ function updateMap(ast, newJson, json, yaml, offset, keyNode) {
 
     //新值不是undefined
 
-    let value = json[keyNode.value];       //老json的值
+    let value = json[keyNode.value]; //老json的值
     let newValue = newJson[keyNode.value]; //新json的值
 
     // primitive value has changed
@@ -318,7 +316,7 @@ function updateMap(ast, newJson, json, yaml, offset, keyNode) {
     // valNode.value非数组，则说明是value是普通值：数字、字符串、布尔值
     if (newValue !== value && !isArray(valNode.value)) {
 
-      let newYaml
+      let newYaml;
       //如果新值是对象或对象
       if(isObject(newValue) || isArray(newValue)){
         newYaml = replaceOldPrimitiveNewObject(valNode, newValue, yaml, offset, keyNode);
@@ -410,9 +408,9 @@ function updateMap(ast, newJson, json, yaml, offset, keyNode) {
 
     if (isUndefined(json[key])) {
 
-      console.log('===insertAfter Json====',offset,yaml)
-      console.log('剩余yaml')
-      console.log(yaml.substring(getNodeEndMark(ast).pointer + offset))
+      console.log('===insertAfter Json====',offset,yaml);
+      console.log('剩余yaml');
+      console.log(yaml.substring(getNodeEndMark(ast).pointer + offset));
 
       let tailYaml = yaml.substring(getNodeEndMark(ast).pointer + offset);
       if(tailYaml && tailYaml.startsWith(']')){
@@ -449,16 +447,16 @@ function dumpJson(json){
       if(isObject(item)){
          return dumpJson(item);
       }
-      return  item;
+      return item;
     }).join(', ');
     str += ']';
   }else if(isObject(json)){
     str = '{';
     str += Object.keys(json).map(key =>{
       if(isObject(json[key])){
-        return `${key}: ${dumpJson(json[key])}`
+        return `${key}: ${dumpJson(json[key])}`;
       }
-      return `${key}: ${json[key]}`
+      return `${key}: ${json[key]}`;
     }).join(', ');
     str += '}';
   }else{
@@ -491,7 +489,7 @@ function replaceNewEmptyArray(node, value, yaml, offset, parentKeyNode){
 // 新老都是非普通值
 function replaceNonPrimitive(node, value, yaml, offset, parentKeyNode){
   let defaultIndent = new Array(parentKeyNode.start_mark.column + 2).fill(' ').join('');
-  let newValueYaml = cleanDump(value).split(EOL).map(item => `${defaultIndent}${item}`).join(EOL)
+  let newValueYaml = cleanDump(value).split(EOL).map(item => `${defaultIndent}${item}`).join(EOL);
 
   return yaml.substr(0, node.start_mark.pointer + offset).trimRight() + EOL +
       String(newValueYaml) +
@@ -508,7 +506,7 @@ function replaceOldObjectNewPrimitive(node, value, yaml, offset, parentKeyNode){
 // 老 普通值， 新对象
 function replaceOldPrimitiveNewObject(node, value, yaml, offset, parentKeyNode){
   let defaultIndent = new Array(parentKeyNode.start_mark.column + 2).fill(' ').join('');
-  let newValueYaml = cleanDump(value).split(EOL).map(item => `${defaultIndent}${item}`).join(EOL)
+  let newValueYaml = cleanDump(value).split(EOL).map(item => `${defaultIndent}${item}`).join(EOL);
 
   return yaml.substr(0, node.start_mark.pointer + offset) + EOL +
       String(newValueYaml) +
@@ -521,9 +519,9 @@ function replacePrimitive(node, value, yaml, offset, parentKeyNode) {
 
 function formatString(value, parentKeyNode){
   if(typeof value === 'string' && value.includes('\n')){
-    let defaultIndent = parentKeyNode  ?
+    let defaultIndent = parentKeyNode ?
         new Array(parentKeyNode.start_mark.column + 2).fill(' ').join('') : 2;
-     return  '|-\n' +  value.split('\n').map(item => `${defaultIndent}${item}`).join(EOL)
+     return '|-\n' + value.split('\n').map(item => `${defaultIndent}${item}`).join(EOL);
   }
   return String(value);
 }
@@ -598,8 +596,8 @@ function removeArrayElement(node, yaml, offset) {
  * @returns {string}
 */
 function changeArrayElement(node, value, yaml, offset, flowStyle) {
-  console.log('changeArrayElement', node)
-  console.log('changeArrayElement,value', value, typeof value)
+  console.log('changeArrayElement', node);
+  console.log('changeArrayElement,value', value, typeof value);
   if(flowStyle){
     return yaml.substr(0, node.start_mark.pointer + offset) +
         String(value) +
@@ -607,7 +605,7 @@ function changeArrayElement(node, value, yaml, offset, flowStyle) {
   }else{
     value = cleanDump(value);
     let indentedValue = indent(value, node.start_mark.column);
-    console.log('indentedValue', indentedValue)
+    console.log('indentedValue', indentedValue);
     // find index of DASH(`-`) character for this array
     let index = node.start_mark.pointer + offset;
     while (index > 0 && yaml[index] !== DASH) {

@@ -18,6 +18,7 @@
     "babel": "^5.8.23",
     "babelify": "^6.3.0",
     "browserify": "^16.5.1",
+    "eslint": "^8.51.0",
     "jest": "^29.6.1",
     "watchify": "^4.0.0"
   },

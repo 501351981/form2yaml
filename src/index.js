@@ -1,3 +1,3 @@
-import Form2Yaml from "./form2yaml.js";
+import Form2Yaml from './form2yaml.js';
 
-export default Form2Yaml
+export default Form2Yaml;

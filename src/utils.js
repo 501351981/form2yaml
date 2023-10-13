@@ -1,4 +1,4 @@
-import {get} from 'lodash'
+import {get} from 'lodash';
 export function isObject(data){
     if(Array.isArray(data) || data === null){
         return false;
@@ -18,6 +18,6 @@ export function deepDeleteKey(json, key){
     let parentKey = keyArr.join('.');
     let data = get(json, parentKey);
     if(isObject(data)){
-        delete data[deleteKey]
+        delete data[deleteKey];
     }
 }
