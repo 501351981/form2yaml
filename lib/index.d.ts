@@ -1,7 +1,7 @@
 declare module 'form2yaml' {
     interface Form2YamlOptions {
-        ignoreMissing?: boolean;
-        controlledYamlKey?: string[],
+        mergeJsonOfYaml?: boolean;
+        nonMergeableKeys?: string[],
         ignoreExtra?: boolean;
         emptyMode?: object;
         keyMap?: object;

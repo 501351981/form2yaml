@@ -117,9 +117,9 @@ const yaml = `
    namespace: default
  `;
 
-// 设置ignoreMissing为false
+// 设置mergeJsonOfYaml为false
 const form2Yaml = new Form2Yaml(yaml, {
-    ignoreMissing: false
+    mergeJsonOfYaml: false
 });
 
 form2Yaml.setJson({

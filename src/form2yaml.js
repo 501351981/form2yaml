@@ -17,11 +17,11 @@ options:
   emptyMode: {
       formKey1: 'delete'
   },
-  ignoreMissing: true,
+  mergeJsonOfYaml: true,
   ignoreExtra: false
  */
 let defaultOptions = {
-    ignoreMissing: true,
+    mergeJsonOfYaml: true,
     ignoreExtra: false,
 }
 
@@ -81,7 +81,7 @@ Form2Yaml.prototype.setJson = function (json){
 
     }
 
-    if(this.options.ignoreMissing){
+    if(this.options.mergeJsonOfYaml){
         this.syncMissingDataToSource(cloneJson, yawn.json);
     }
     if(this.options.ignoreExtra){
@@ -122,11 +122,11 @@ Form2Yaml.prototype.ignoreExtraJsonKey = function (sourceData, yamlJsonData){
     }
 }
 Form2Yaml.prototype.syncMissingDataToSource = function (sourceData, yamlJsonData, parentKey){
-    let controlledYamlKey = this.options.controlledYamlKey || [];
+    let nonMergeableKeys = this.options.nonMergeableKeys || [];
     if(isObject(yamlJsonData)){
         Object.keys(yamlJsonData).forEach(key => {
             let fullKey = parentKey ? `${parentKey}.${key}` : key;
-            if(controlledYamlKey.includes(fullKey)){
+            if(nonMergeableKeys.includes(fullKey)){
                 return
             }
             if(!has(sourceData, key)){

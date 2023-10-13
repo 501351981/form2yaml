@@ -1,6 +1,6 @@
 {
   "name": "form2yaml",
-  "version": "1.1.1",
+  "version": "1.1.2",
   "description": "实现Form表单和Yaml数据的转换，支持保留Yaml注释，支持Yaml数据校验，支持Form的key与Yaml的key映射",
   "main": "lib/index.js",
   "type": "module",

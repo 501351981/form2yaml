@@ -18,6 +18,7 @@ import {
 } from 'lodash';
 
 import YAWNError from './error.js';
+import {trim} from "lodash/string.js";
 
 const NULL_TAG = 'tag:yaml.org,2002:null';
 const STR_TAG = 'tag:yaml.org,2002:str';
@@ -176,10 +177,58 @@ function getTag(json) {
  *
 */
 function updateSeq(ast, newJson, yaml, offset, keyNode) {
+  console.log('updateSeq ast==>', ast)
+  console.log('updateSeq newJson==>', newJson)
+  console.log('updateSeq yaml, offset, keyNode==>', yaml, offset, keyNode)
+
   let values = load(serialize(ast));
+  console.log('values', values)
   let min = Math.min(values.length, newJson.length);
   for (let i = 0; i < min; i++) {
-    const newYaml = changeArrayElement(ast.value[i], cleanDump(newJson[i]), yaml, offset);
+    console.log('node i=>', ast.value[i])
+    let valNode = ast.value[i];
+    let value = values[i];
+    let newValue = newJson[i];
+    console.log('value, newValue', value, newValue)
+    if(newValue === value){
+      continue;
+    }
+
+    //两个都是数组
+    if(isArray(newValue) && isArray(value)){
+      console.log('递归 updateSeq')
+      const newYaml =  updateSeq(valNode, newValue, yaml, offset, valNode)
+      offset = offset + newYaml.length - yaml.length;
+      yaml = newYaml;
+      continue;
+    }
+
+    //两个都是对象
+    if(isObject(newValue) && !isArray(newValue) && isObject(value) && !isArray(value)){
+      //都是对象
+      console.log('递归对象')
+      const newYaml =  updateMap(valNode, newValue, value, yaml, offset, valNode)
+      offset = offset + newYaml.length - yaml.length;
+      yaml = newYaml;
+      continue;
+    }
+
+
+    // if (newValue !== value && !isArray(valNode.value)) {
+    //
+    //   let newYaml
+    //   if(isObject(newValue) || isArray(newValue)){
+    //     newYaml = replaceOldPrimitiveNewObject(valNode, newValue, yaml, offset, keyNode);
+    //   }else{
+    //     newYaml = replacePrimitive(valNode, newValue, yaml, offset, keyNode);
+    //   }
+    //   // replace the value node
+    //
+    //   offset = offset + newYaml.length - yaml.length;
+    //   yaml = newYaml;
+    //   continue;
+    // }
+    const newYaml = changeArrayElement(valNode, newJson[i], yaml, offset, ast.flow_style);
     offset = offset + newYaml.length - yaml.length;
     yaml = newYaml;
   }
@@ -191,7 +240,32 @@ function updateSeq(ast, newJson, yaml, offset, keyNode) {
       yaml = newYaml;
     }
   } else if (newJson.length > min) {
-    yaml = insertAfterNode(ast, cleanDump(newJson.slice(min)), yaml, offset, keyNode);
+    //移动到末尾
+    console.log('insertAfterNode=====>', offset)
+    console.log( yaml)
+    console.log('剩余yaml')
+    console.log(yaml.substring(getNodeEndMark(ast).pointer + offset))
+
+    let tailYaml = yaml.substring(getNodeEndMark(ast).pointer + offset);
+    if(tailYaml){
+      let arr = tailYaml.split(EOL);
+      for(let i = 0; i < arr.length; i++){
+        if(arr[i].trim().startsWith('#')){
+          offset += arr[i].length + 1
+        }else{
+          break;
+        }
+      }
+
+    }
+    let insertValue;
+    if(ast.flow_style){
+      insertValue = dumpJson(newJson.slice(min));
+      insertValue = insertValue.substring(1, insertValue.length-1);
+    }else{
+      insertValue = cleanDump(newJson.slice(min));
+    }
+    yaml = insertAfterNode(ast,insertValue , yaml, offset, keyNode, ast.flow_style);
   }
 
   return yaml;
@@ -333,9 +407,32 @@ function updateMap(ast, newJson, json, yaml, offset, keyNode) {
 
   // look for new items to add
   each(newJson, (value, key)=> {
+
     if (isUndefined(json[key])) {
-      let newValue = cleanDump({[key]: value});
-      const newYaml = insertAfterNode(ast, newValue, yaml, offset, keyNode);
+
+      console.log('===insertAfter Json====',offset,yaml)
+      console.log('剩余yaml')
+      console.log(yaml.substring(getNodeEndMark(ast).pointer + offset))
+
+      let tailYaml = yaml.substring(getNodeEndMark(ast).pointer + offset);
+      if(tailYaml && tailYaml.startsWith(']')){
+        for(let i = 0; i < tailYaml.length; i++){
+          offset++;
+          if(tailYaml[i]===']'){
+            break;
+          }
+        }
+      }
+
+      let insertValue;
+      if(ast.flow_style){
+        insertValue = dumpJson({[key]: value});
+        insertValue = insertValue.substring(1, insertValue.length-1);
+      }else{
+        insertValue = cleanDump({[key]: value});
+      }
+
+      const newYaml = insertAfterNode(ast, insertValue, yaml, offset, keyNode, ast.flow_style);
       offset = offset + newYaml.length - yaml.length;
       yaml = newYaml;
     }
@@ -344,6 +441,31 @@ function updateMap(ast, newJson, json, yaml, offset, keyNode) {
   return yaml;
 }
 
+function dumpJson(json){
+  let str = '';
+  if(isArray(json)){
+    str += '[';
+    str += json.map(item =>{
+      if(isObject(item)){
+         return dumpJson(item);
+      }
+      return  item;
+    }).join(', ');
+    str += ']';
+  }else if(isObject(json)){
+    str = '{';
+    str += Object.keys(json).map(key =>{
+      if(isObject(json[key])){
+        return `${key}: ${dumpJson(json[key])}`
+      }
+      return `${key}: ${json[key]}`
+    }).join(', ');
+    str += '}';
+  }else{
+    str += json;
+  }
+  return str;
+}
 /*
  * Place value in node range in yaml string
  *
@@ -435,16 +557,20 @@ function replaceNode(node, value, yaml, offset) {
  *
  * @returns {string}
 */
-function insertAfterNode(node, value, yaml, offset, keyNode) {
-  let indentedValue = indent(value, node.start_mark.column);
-  if(isArray(node.value) && node.value.length === 0 && keyNode){
-    indentedValue = indent(value, keyNode.start_mark.column + 2);
+function insertAfterNode(node, value, yaml, offset, keyNode, flowStyle) {
+  if(flowStyle){
+    return yaml.substr(0, getNodeEndMark(node).pointer + offset) + ', ' +
+        value +
+        yaml.substring(getNodeEndMark(node).pointer + offset);
+  }else{
+    let indentedValue = indent(value, node.start_mark.column);
+
+    return yaml.substr(0, getNodeEndMark(node).pointer + offset) +
+        EOL +
+        indentedValue +
+        yaml.substring(getNodeEndMark(node).pointer + offset);
   }
 
-  return yaml.substr(0, getNodeEndMark(node).pointer + offset) +
-    EOL +
-    indentedValue +
-    yaml.substring(getNodeEndMark(node).pointer + offset);
 }
 
 /*
@@ -471,18 +597,28 @@ function removeArrayElement(node, yaml, offset) {
  *
  * @returns {string}
 */
-function changeArrayElement(node, value, yaml, offset) {
-  let indentedValue = indent(value, node.start_mark.column);
+function changeArrayElement(node, value, yaml, offset, flowStyle) {
+  console.log('changeArrayElement', node)
+  console.log('changeArrayElement,value', value, typeof value)
+  if(flowStyle){
+    return yaml.substr(0, node.start_mark.pointer + offset) +
+        String(value) +
+        yaml.substring(getNodeEndMark(node).pointer + offset);
+  }else{
+    value = cleanDump(value);
+    let indentedValue = indent(value, node.start_mark.column);
+    console.log('indentedValue', indentedValue)
+    // find index of DASH(`-`) character for this array
+    let index = node.start_mark.pointer + offset;
+    while (index > 0 && yaml[index] !== DASH) {
+      index--;
+    }
 
-  // find index of DASH(`-`) character for this array
-  let index = node.start_mark.pointer + offset;
-  while (index > 0 && yaml[index] !== DASH) {
-    index--;
+    return yaml.substr(0, index + 2) +
+        indentedValue.substr(node.start_mark.column) +
+        yaml.substring(getNodeEndMark(node).pointer + offset);
   }
 
-  return yaml.substr(0, index + 2) +
-      indentedValue.substr(node.start_mark.column) +
-      yaml.substring(getNodeEndMark(node).pointer + offset);
 }
 
 /*
@@ -514,6 +650,8 @@ function getNodeEndMark(ast) {
  *
  * @returns {string}
 */
+
+//给一个字符串str的每一行添加depth个空格前缀
 function indent(str, depth) {
   return str
     .split(EOL)
