@@ -44,7 +44,6 @@ export default class YAWN {
   }
 
   set json(newJson) {
-    // if json is not changed do nothing
     if (isEqual(this.json, newJson)) {
       return;
     }
@@ -62,16 +61,12 @@ export default class YAWN {
     //看看json的类型和之前是否一致，是对象map，还是数字、字符串、数值等
     let newTag = getTag(newJson);
     if (ast.tag !== newTag) {
-      //调用dump json转yaml
       let newYaml = cleanDump(newJson);
 
-      // replace this.yaml value from start to end mark with newYaml if node is
-      // primitive
       if (!isObject(newJson)) {
         //头部注释  +  新yaml内容   + 尾部注释
         this.yaml = replacePrimitive(ast, newYaml, this.yaml, 0);
 
-      // if node is not primitive
       } else {
         // 添加老yaml的缩进
         //头部注释  +  新yaml内容   + 尾部注释
@@ -175,7 +170,6 @@ function getTag(json) {
  *
 */
 function updateSeq(ast, newJson, yaml, offset, keyNode) {
-
   let values = load(serialize(ast));
   let min = Math.min(values.length, newJson.length);
   for (let i = 0; i < min; i++) {
@@ -203,21 +197,6 @@ function updateSeq(ast, newJson, yaml, offset, keyNode) {
       continue;
     }
 
-
-    // if (newValue !== value && !isArray(valNode.value)) {
-    //
-    //   let newYaml
-    //   if(isObject(newValue) || isArray(newValue)){
-    //     newYaml = replaceOldPrimitiveNewObject(valNode, newValue, yaml, offset, keyNode);
-    //   }else{
-    //     newYaml = replacePrimitive(valNode, newValue, yaml, offset, keyNode);
-    //   }
-    //   // replace the value node
-    //
-    //   offset = offset + newYaml.length - yaml.length;
-    //   yaml = newYaml;
-    //   continue;
-    // }
     const newYaml = changeArrayElement(valNode, newJson[i], yaml, offset,ast, ast.flow_style);
     offset = offset + newYaml.length - yaml.length;
     yaml = newYaml;
@@ -274,76 +253,50 @@ function updateMap(ast, newJson, json, yaml, offset, keyNode) {
   each(ast.value, pair => {
     let [keyNode, valNode] = pair;
 
-    // node is deleted
     if (isUndefined(newJson[keyNode.value])) {
-
-      // TODO: can we use of the methods below?
-      //删除不存在的节点数据
-      //被删除节点之前的 + 被删除节点之后的
-      //修改偏移量，删除偏移量减少
-      let newYaml = yaml.substr(0, keyNode.start_mark.pointer + offset);
-
-      //如果后面没有任何内容，只剩一个空行，则删除这个空行
-      let lineBreak = yaml[getNodeEndMark(valNode).pointer + offset] === '\n';
-      if(lineBreak){
-        newYaml = newYaml.trimRight() + '\n' + yaml.substring(getNodeEndMark(valNode).pointer + offset +1);
-      }else{
-        newYaml += yaml.substring(getNodeEndMark(valNode).pointer + offset);
-      }
-
+      let newYaml = deleteObjectRow(keyNode, valNode, yaml, offset);
       offset = offset + newYaml.length - yaml.length;
       yaml = newYaml;
       return;
     }
 
     //新值不是undefined
-
     let value = json[keyNode.value]; //老json的值
     let newValue = newJson[keyNode.value]; //新json的值
 
-    // primitive value has changed
+    //如果老值是普通值
     //value为对象或者数组时，valNode.value都是数组
-    // valNode.value非数组，则说明是value是普通值：数字、字符串、布尔值
+    //valNode.value非数组，则说明是value是普通值：数字、字符串、布尔值
     if (newValue !== value && !isArray(valNode.value)) {
 
       let newYaml;
-      //如果新值是对象或数组
-      if(isObject(newValue) || isArray(newValue)){
-        newYaml = replaceOldPrimitiveNewObject(valNode, newValue, yaml, offset, keyNode);
-      }else{
+      if(!isObject(newValue)){
+        //老值：普通值； 新值： 普通值
         newYaml = replacePrimitive(valNode, newValue, yaml, offset, keyNode);
+      }else if(isArray(newValue) && newValue.length === 0){
+        //老值：普通值； 新值： 空数组
+        newYaml = replaceNewEmptyArray(valNode, newValue, yaml, offset, keyNode);
+      }else if(!isArray(newValue) && Object.keys(newValue).length === 0){
+        //老值：普通值； 新值： 空对象
+        newYaml = replaceNewEmptyObject(valNode, newValue, yaml, offset, keyNode);
+      }else{
+        newYaml = replaceOldPrimitiveNewObject(valNode, newValue, yaml, offset, keyNode);
       }
-      // replace the value node
 
       offset = offset + newYaml.length - yaml.length;
       yaml = newYaml;
-      // remove the key/value from newJson so it's not detected as new pair in
-      // later code
       delete newJson[keyNode.value];
       return;
-
-      //todo newValue是数组或者map，这种方式就不正确了
     }
 
-    // non primitive value has changed
     // 老值是对象或者数组
     if (!isEqual(newValue, value) && isArray(valNode.value)) {
-      //如果新值不是对象或者数组
+      let newYaml;
       if(!isObject(newValue) && !isArray(newValue)){
-       let newYaml = replaceOldObjectNewPrimitive(valNode, newValue, yaml, offset, keyNode);
-        offset = offset + newYaml.length - yaml.length;
-        yaml = newYaml;
-        delete newJson[keyNode.value];
-        return;
-      }
-      // todo  如果新老值格式不同，则应该直接替换
-
-
-      // array value has changed
-      if(isArray(newValue) && !isArray(value) || !isArray(newValue) && isArray(value)){
-
+        //老值：对象/数组； 新值： 普通值
+        newYaml = replaceOldObjectNewPrimitive(valNode, newValue, yaml, offset, keyNode);
+      }else if(isArray(newValue) && !isArray(value) || !isArray(newValue) && isArray(value)){
         //新老值是对象或数组，但是格式不一样
-        let newYaml;
         if(isArray(newValue) && newValue.length === 0){
            newYaml = replaceNewEmptyArray(valNode, newValue, yaml, offset, keyNode);
         }else if(typeof newValue === 'object' && Object.keys(newValue).length ===0){
@@ -351,52 +304,28 @@ function updateMap(ast, newJson, json, yaml, offset, keyNode) {
         }else{
           newYaml = replaceNonPrimitive(valNode, newValue, yaml, offset, keyNode);
         }
-        offset = offset + newYaml.length - yaml.length;
-        yaml = newYaml;
-        delete newJson[keyNode.value];
-        return;
-
       }else if (isArray(newValue)) {
         if(valNode.value.length === 0){
-          let newYaml = replaceNonPrimitive(valNode, newValue, yaml, offset, keyNode);
-          offset = offset + newYaml.length - yaml.length;
-          yaml = newYaml;
-          return;
+          newYaml = replaceNonPrimitive(valNode, newValue, yaml, offset, keyNode);
         }else if(newValue.length === 0){
-          let newYaml = replaceNewEmptyArray(valNode, newValue, yaml, offset, keyNode);
-          offset = offset + newYaml.length - yaml.length;
-          yaml = newYaml;
-          return;
+          newYaml = replaceNewEmptyArray(valNode, newValue, yaml, offset, keyNode);
+        }else{
+          newYaml = updateSeq(valNode, newValue, yaml, offset, keyNode);
         }
-        // recurse
-        const newYaml = updateSeq(valNode, newValue, yaml, offset, keyNode);
-        offset = offset + newYaml.length - yaml.length;
-        yaml = newYaml;
-
-      // map value has changed
       } else {
         //newValue是对象
-        //todo value不是对象如何处理
-        // recurse
         if(valNode.value.length === 0){
-          let newYaml = replaceNonPrimitive(valNode, newValue, yaml, offset, keyNode);
-          offset = offset + newYaml.length - yaml.length;
-          yaml = newYaml;
-          return;
+          newYaml = replaceNonPrimitive(valNode, newValue, yaml, offset, keyNode);
         }else if(Object.keys(newValue).length === 0){
-
-          let newYaml = replaceNewEmptyObject(valNode, newValue, yaml, offset, keyNode);
-          offset = offset + newYaml.length - yaml.length;
-          yaml = newYaml;
-          return;
+          newYaml = replaceNewEmptyObject(valNode, newValue, yaml, offset, keyNode);
+        }else{
+          newYaml = updateMap(valNode, newValue, value, yaml, offset, keyNode);
         }
-
-        const newYaml = updateMap(valNode, newValue, value, yaml, offset, keyNode);
-        offset = offset + newYaml.length - yaml.length;
-        yaml = newYaml;
-
-        delete newJson[keyNode.value];
       }
+      offset = offset + newYaml.length - yaml.length;
+      yaml = newYaml;
+      delete newJson[keyNode.value];
+      return;
     }
   });
 
@@ -404,7 +333,6 @@ function updateMap(ast, newJson, json, yaml, offset, keyNode) {
   each(newJson, (value, key)=> {
 
     if (isUndefined(json[key])) {
-
 
       let tailYaml = yaml.substring(getNodeEndMark(ast).pointer + offset);
       if(tailYaml){
@@ -497,6 +425,11 @@ function findNodeEndMarkPoint(node, yaml, offset){
       return node.end_mark.pointer + offset;
     }
     let lastValue = value[value.length-1];
+    // if(node.tag === SEQ_TAG && isArray(lastValue.value)){
+    //   return findNodeEndMarkPoint(lastValue, yaml, offset);
+    // }else if(node.tag === MAP_TAG &&isArray(lastValue[1].value)){
+    //   return findNodeEndMarkPoint(lastValue[1], yaml, offset);
+    // }
     let point = node.tag === SEQ_TAG ? lastValue.end_mark.pointer : lastValue[1].end_mark.pointer;
 
     let tailYaml = yaml.substring(point+offset);
@@ -512,6 +445,28 @@ function findNodeEndMarkPoint(node, yaml, offset){
   }
   return node.end_mark.pointer + offset;
 }
+
+function deleteObjectRow(keyNode, valNode, yaml, offset){
+  let newYaml = yaml.substr(0, keyNode.start_mark.pointer + offset);
+
+  //如果后面没有任何内容，只剩一个空行，则删除这个空行
+  let lineBreak = yaml[getNodeEndMark(valNode).pointer + offset] === '\n';
+  if(lineBreak){
+    newYaml = newYaml.trimRight() + '\n' + yaml.substring(getNodeEndMark(valNode).pointer + offset +1);
+  }else{
+    let commentLength = 0;
+    let tailYaml = yaml.substring(getNodeEndMark(valNode).pointer + offset);
+    if(tailYaml.trimLeft().startsWith('#')){
+      while (!['\n', EOL].includes(tailYaml[commentLength])){
+        commentLength++;
+      }
+      newYaml += yaml.substring(getNodeEndMark(valNode).pointer + offset + commentLength + 1);
+    }else{
+      newYaml += tailYaml;
+    }
+  }
+  return newYaml;
+}
 // 新 空对象 老 非空对象
 function replaceNewEmptyObject(node, value, yaml, offset, parentKeyNode){
   return yaml.substr(0, node.start_mark.pointer + offset).trimRight() + ' {}' + EOL +
@@ -520,8 +475,12 @@ function replaceNewEmptyObject(node, value, yaml, offset, parentKeyNode){
 
 // 新 空数组 老 非空数组
 function replaceNewEmptyArray(node, value, yaml, offset, parentKeyNode){
-  return yaml.substr(0, node.start_mark.pointer + offset).trimRight() + ' []' + EOL +
-      yaml.substring(findNodeEndMarkPoint(node, yaml, offset));
+  let tailYaml= yaml.substring(findNodeEndMarkPoint(node, yaml, offset));
+  if(tailYaml && !['\n',EOL].includes(tailYaml[0])){
+    tailYaml = EOL + tailYaml;
+  }
+  return yaml.substr(0, node.start_mark.pointer + offset).trimRight() + ' []' +
+      tailYaml;
 }
 
 

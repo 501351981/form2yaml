@@ -130,7 +130,6 @@ describe("setJson", () => {
 
         let yaml = [
             'meta:',
-            '    #注释',
             '  #注释',
 
         ].join('\n')
@@ -821,6 +820,38 @@ describe("setJson", () => {
             '  f: 2'
         ].join('\n')
         console.log(form2yaml.getYaml().trim())
+        expect(form2yaml.getYaml().trim()).toEqual(yaml)
+    })
+
+    it("删除对象某个属性之后，该属性行的注释也删掉", ()=> {
+        let form2yaml = new Form2Yaml('a: 1\nb: 2 #test\nc: 3', {
+            mergeJsonOfYaml: false
+        })
+        form2yaml.setJson({
+            a: 1,
+            c: 2
+        })
+
+        let yaml = [
+            'a: 1',
+            'c: 2',
+        ].join('\n')
+        expect(form2yaml.getYaml().trim()).toEqual(yaml)
+    })
+
+    it("老值是普通值，新值为空数组或空对象", ()=> {
+        let form2yaml = new Form2Yaml('a: 1\nb: 1', {
+            mergeJsonOfYaml: false
+        })
+        form2yaml.setJson({
+            a: [],
+            b: {}
+        })
+
+        let yaml = [
+            'a: []',
+            'b: {}'
+        ].join('\n')
         expect(form2yaml.getYaml().trim()).toEqual(yaml)
     })
 })
