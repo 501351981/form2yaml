@@ -333,16 +333,19 @@ describe("setJson", () => {
             mergeJsonOfYaml: false
         })
         form2yaml.setJson({
-            a: '1\n2'
+            a: '1\n\n\n2'
         })
 
         let yaml = [
             'a: |-',
             '  1',
+            '',
+            '',
             '  2'
         ].join('\n')
         expect(form2yaml.getYaml().trim()).toEqual(yaml)
     })
+
     it("原来是多行字符，后来设为单行字符", ()=> {
         let form2yaml = new Form2Yaml('a: |-\n  1\n  2', {
             mergeJsonOfYaml: false
@@ -613,6 +616,211 @@ describe("setJson", () => {
         let yaml = [
             'a: {b: 3, c: [4, 5, 6], d: {a: 1}}',
         ].join('\n');
+        expect(form2yaml.getYaml().trim()).toEqual(yaml)
+    })
+
+    it("行内对象后面接非行内对象", ()=> {
+        let form2yaml = new Form2Yaml('a:\n  - 1 #test1\nb: 2', {
+        })
+        form2yaml.setJson({
+            a: [1,2]
+        })
+
+        let yaml = [
+            'a:',
+            '  - 1 #test1',
+            '  - 2',
+            'b: 2'
+        ].join('\n');
+        expect(form2yaml.getYaml().trim()).toEqual(yaml)
+    })
+    it("对象追加属性，保留注释位置", ()=> {
+        let form2yaml = new Form2Yaml('a: 1 #test', {
+        })
+        form2yaml.setJson({
+            a: 1,
+            b: 2
+        })
+
+        let yaml = [
+            'a: 1 #test',
+            'b: 2'
+        ].join('\n');
+        expect(form2yaml.getYaml().trim()).toEqual(yaml)
+    })
+    it("对象追加属性，保留注释位置", ()=> {
+        let form2yaml = new Form2Yaml('a: 1 #test\n#test2\n #test3', {
+        })
+        form2yaml.setJson({
+            a: 1,
+            b: 2
+        })
+
+        let yaml = [
+            'a: 1 #test',
+            '#test2',
+            ' #test3',
+            'b: 2'
+        ].join('\n');
+        expect(form2yaml.getYaml().trim()).toEqual(yaml)
+    })
+
+    it("对象数组后追加对象数组，保留注释", ()=> {
+        let form2yaml = new Form2Yaml('a:\n  b:\n    - 1 \n#test1\nf: 1', {
+        })
+        form2yaml.setJson({
+            a: {
+                b: [2],
+                c: ['a']
+            }
+        })
+
+        let yaml = [
+            'a:',
+            '  b:',
+            '    - 2',
+            '#test1',
+            '  c:',
+            '    - a',
+            'f: 1'
+        ].join('\n');
+        expect(form2yaml.getYaml().trim()).toEqual(yaml)
+    })
+
+    it("对象数组后追加对象数组，保留注释", ()=> {
+        let form2yaml = new Form2Yaml('a:\n  b:\n    - 1 #test1\nf: 1', {
+        })
+        form2yaml.setJson({
+            a: {
+                b: [2],
+                c: ['a']
+            }
+        })
+
+        let yaml = [
+            'a:',
+            '  b:',
+            '    - 2 #test1',
+            '  c:',
+            '    - a',
+            'f: 1'
+        ].join('\n');
+        expect(form2yaml.getYaml().trim()).toEqual(yaml)
+    })
+    it("对象数组后追加对象数组，保留注释", ()=> {
+        let form2yaml = new Form2Yaml('a:\n  b: 1\nf: 2', {
+        })
+        form2yaml.setJson({
+            a: {
+                b: 2,
+                c: [1, 2]
+            },
+            f: 3
+        })
+
+        let yaml = [
+            'a:',
+            '  b: 2',
+            '  c:',
+            '    - 1',
+            '    - 2',
+            'f: 3'
+        ].join('\n');
+        expect(form2yaml.getYaml().trim()).toEqual(yaml)
+    })
+
+    it("修改多行字符串的值", ()=> {
+        let form2yaml = new Form2Yaml('a:\n  - |-\n    s\n    s\nb: 1', {
+        })
+        form2yaml.setJson({
+            a: ['d\n\n\nd']
+        })
+
+        let yaml = [
+            'a:',
+            '  - |-',
+            '    d',
+            '',
+            '',
+            '    d',
+            'b: 1'
+        ].join('\n')
+        console.log(form2yaml.getYaml().trim())
+        expect(form2yaml.getYaml().trim()).toEqual(yaml)
+    })
+    it("数组内容注释单独占一行", ()=> {
+        let form2yaml = new Form2Yaml('a:\n  - 1\n#test\nb: 1', {
+        })
+        form2yaml.setJson({
+            a: [1,2]
+        })
+
+        let yaml = [
+            'a:',
+            '  - 1',
+            '#test',
+            '  - 2',
+            'b: 1'
+        ].join('\n')
+        console.log(form2yaml.getYaml().trim())
+        expect(form2yaml.getYaml().trim()).toEqual(yaml)
+    })
+    it("原来是对象后来改为空数组", ()=> {
+        let form2yaml = new Form2Yaml('a:\n  c:\n    - 1\n#test\nb: 1', {
+        })
+        form2yaml.setJson({
+            a: []
+        })
+
+        let yaml = [
+            'a: []',
+            'b: 1'
+        ].join('\n')
+        expect(form2yaml.getYaml().trim()).toEqual(yaml)
+    })
+    it("原来是对象后来改为空数组", ()=> {
+        let form2yaml = new Form2Yaml('a:\n  b:\n    - c:\n      - d #test\n  f: 1', {
+        })
+        form2yaml.setJson({
+            a: {
+                b: [
+                    {
+                        c:[]
+                    }
+                ]
+            }
+        })
+
+        let yaml = [
+            'a:',
+            '  b:',
+            '    - c: []',
+            '  f: 1'
+        ].join('\n')
+        console.log(form2yaml.getYaml().trim())
+        expect(form2yaml.getYaml().trim()).toEqual(yaml)
+    })
+
+    it("原来是对象后来改为空对象", ()=> {
+        let form2yaml = new Form2Yaml('a:\n  b:\n    c:\n      d: 1 #test\n  f: 1', {
+            mergeJsonOfYaml: false
+        })
+        form2yaml.setJson({
+            a: {
+                b: {
+                    c:{}
+                },
+                f: 2
+            }
+        })
+
+        let yaml = [
+            'a:',
+            '  b:',
+            '    c: {}',
+            '  f: 2'
+        ].join('\n')
+        console.log(form2yaml.getYaml().trim())
         expect(form2yaml.getYaml().trim()).toEqual(yaml)
     })
 })

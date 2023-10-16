@@ -1,4 +1,4 @@
-const Form2Yaml =  require("../lib/index.js");
+const Form2Yaml = require('../lib/index.js');
 
 const defaultYaml = [
     'meta:',
@@ -6,7 +6,7 @@ const defaultYaml = [
     '  namespace: default',
     '  #注释',
     '  description: 描述信息'
-].join('\n')
+].join('\n');
 
 
 describe('getJson', ()=>{
@@ -16,18 +16,18 @@ describe('getJson', ()=>{
                 name: 'meta.name',
                 namespace: 'meta.namespace',
             }
-        })
+        });
 
         expect(form2yaml.getJson()).toEqual({
             name: 'test',
             namespace: 'default',
-        })
+        });
 
     });
     it('keyMap长度为空 ', function () {
         let form2yaml = new Form2Yaml(defaultYaml, {
             keyMap:{}
-        })
+        });
 
         expect(form2yaml.getJson()).toEqual({
             meta:{
@@ -35,7 +35,7 @@ describe('getJson', ()=>{
                 namespace: 'default',
                 description: '描述信息'
             }
-        })
+        });
     });
     it('keyMap中包含不存在字段 ', function () {
         let form2yaml = new Form2Yaml(defaultYaml, {
@@ -43,12 +43,12 @@ describe('getJson', ()=>{
                 name: 'meta.name',
                 namespace: 'meta.namespace.test',
             }
-        })
+        });
 
         expect(form2yaml.getJson()).toEqual({
             name: 'test',
             namespace: undefined
-        })
+        });
 
     });
     it('获取全部json ', function () {
@@ -57,7 +57,7 @@ describe('getJson', ()=>{
                 name: 'meta.name',
                 namespace: 'meta.namespace.test',
             }
-        })
+        });
 
         expect(form2yaml.getJson('all')).toEqual({
             name: 'test',
@@ -65,7 +65,7 @@ describe('getJson', ()=>{
                 namespace: 'default',
                 description: '描述信息'
             }
-        })
+        });
 
     });
-})
+});
