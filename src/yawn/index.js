@@ -60,6 +60,11 @@ export default class YAWN {
     // -------------------------------------------------------------------------
     //看看json的类型和之前是否一致，是对象map，还是数字、字符串、数值等
     let newTag = getTag(newJson);
+    if(!ast){
+      this.yaml = cleanDump(newJson);
+      return;
+    }
+
     if (ast.tag !== newTag) {
       let newYaml = cleanDump(newJson);
 

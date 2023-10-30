@@ -854,4 +854,18 @@ describe("setJson", () => {
         ].join('\n')
         expect(form2yaml.getYaml().trim()).toEqual(yaml)
     })
+
+    it("yaml为空", ()=> {
+        let form2yaml = new Form2Yaml('')
+        form2yaml.setJson({
+            a: [],
+            b: {}
+        })
+
+        let yaml = [
+            'a: []',
+            'b: {}'
+        ].join('\n')
+        expect(form2yaml.getYaml().trim()).toEqual(yaml)
+    })
 })
