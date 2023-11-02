@@ -138,7 +138,7 @@ describe("setJson", () => {
     it("json中字段空值时保留该字段", ()=> {
         let form2yaml = new Form2Yaml(defaultYaml, {
             keyMap:{
-              'name': 'meta.name'
+                'name': 'meta.name'
             },
             emptyMode: {
                 'meta.name': 'retain',
@@ -744,7 +744,6 @@ describe("setJson", () => {
             '    d',
             'b: 1'
         ].join('\n')
-        console.log(form2yaml.getYaml().trim())
         expect(form2yaml.getYaml().trim()).toEqual(yaml)
     })
     it("数组内容注释单独占一行", ()=> {
@@ -761,7 +760,6 @@ describe("setJson", () => {
             '  - 2',
             'b: 1'
         ].join('\n')
-        console.log(form2yaml.getYaml().trim())
         expect(form2yaml.getYaml().trim()).toEqual(yaml)
     })
     it("原来是对象后来改为空数组", ()=> {
@@ -796,7 +794,6 @@ describe("setJson", () => {
             '    - c: []',
             '  f: 1'
         ].join('\n')
-        console.log(form2yaml.getYaml().trim())
         expect(form2yaml.getYaml().trim()).toEqual(yaml)
     })
 
@@ -819,7 +816,6 @@ describe("setJson", () => {
             '    c: {}',
             '  f: 2'
         ].join('\n')
-        console.log(form2yaml.getYaml().trim())
         expect(form2yaml.getYaml().trim()).toEqual(yaml)
     })
 
@@ -865,6 +861,27 @@ describe("setJson", () => {
         let yaml = [
             'a: []',
             'b: {}'
+        ].join('\n')
+        expect(form2yaml.getYaml().trim()).toEqual(yaml)
+    })
+
+
+    it("子属性后面有注释，子属性后面添加兄弟元素", ()=> {
+        let form2yaml = new Form2Yaml('a:\n  b: 1\n#test\nc: 2')
+        form2yaml.setJson({
+            a: {
+                b:1,
+                f:2
+            },
+        })
+
+
+        let yaml = [
+            'a:',
+            '  b: 1',
+            '#test',
+            '  f: 2',
+            'c: 2'
         ].join('\n')
         expect(form2yaml.getYaml().trim()).toEqual(yaml)
     })

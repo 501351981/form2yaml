@@ -1,6 +1,6 @@
 'use strict';
 
-import { EOL } from 'os';
+import {EOL} from 'os';
 import {compose, serialize} from 'yaml-js';
 import {load, dump} from 'js-yaml';
 import {
@@ -18,6 +18,7 @@ import {
 } from 'lodash';
 
 import YAWNError from './error.js';
+
 const NULL_TAG = 'tag:yaml.org,2002:null';
 const STR_TAG = 'tag:yaml.org,2002:str';
 const INT_TAG = 'tag:yaml.org,2002:int';
@@ -58,9 +59,9 @@ export default class YAWN {
     // -------------------------------------------------------------------------
     // check if entire json is changed
     // -------------------------------------------------------------------------
-    //看看json的类型和之前是否一致，是对象map，还是数字、字符串、数值等
+    // 看看json的类型和之前是否一致，是对象map，还是数字、字符串、数值等
     let newTag = getTag(newJson);
-    if(!ast){
+    if (!ast) {
       this.yaml = cleanDump(newJson);
       return;
     }
@@ -69,12 +70,12 @@ export default class YAWN {
       let newYaml = cleanDump(newJson);
 
       if (!isObject(newJson)) {
-        //头部注释  +  新yaml内容   + 尾部注释
+        // 头部注释  +  新yaml内容   + 尾部注释
         this.yaml = replacePrimitive(ast, newYaml, this.yaml, 0);
 
       } else {
         // 添加老yaml的缩进
-        //头部注释  +  新yaml内容   + 尾部注释
+        // 头部注释  +  新yaml内容   + 尾部注释
         this.yaml = replaceNode(ast, newYaml, this.yaml, 0);
       }
 
@@ -106,9 +107,9 @@ export default class YAWN {
 
     // Trim trailing whitespaces
     this.yaml = this.yaml
-      .split(EOL)
-      .map(line=> line.replace(/[ \t]+$/, ''))
-      .join(EOL);
+        .split(EOL)
+        .map(line => line.replace(/[ \t]+$/, ''))
+        .join(EOL);
   }
 
   toString() {
@@ -181,28 +182,28 @@ function updateSeq(ast, newJson, yaml, offset, keyNode) {
     let valNode = ast.value[i];
     let value = values[i];
     let newValue = newJson[i];
-    if(newValue === value){
+    if (newValue === value) {
       continue;
     }
 
-    //两个都是数组
-    if(isArray(newValue) && isArray(value)){
+    // 两个都是数组
+    if (isArray(newValue) && isArray(value)) {
       const newYaml = updateSeq(valNode, newValue, yaml, offset, valNode);
       offset = offset + newYaml.length - yaml.length;
       yaml = newYaml;
       continue;
     }
 
-    //两个都是对象
-    if(isObject(newValue) && !isArray(newValue) && isObject(value) && !isArray(value)){
-      //都是对象
+    // 两个都是对象
+    if (isObject(newValue) && !isArray(newValue) && isObject(value) && !isArray(value)) {
+      // 都是对象
       const newYaml = updateMap(valNode, newValue, value, yaml, offset, valNode);
       offset = offset + newYaml.length - yaml.length;
       yaml = newYaml;
       continue;
     }
 
-    const newYaml = changeArrayElement(valNode, newJson[i], yaml, offset,ast, ast.flow_style);
+    const newYaml = changeArrayElement(valNode, newJson[i], yaml, offset, ast, ast.flow_style);
     offset = offset + newYaml.length - yaml.length;
     yaml = newYaml;
   }
@@ -214,30 +215,30 @@ function updateSeq(ast, newJson, yaml, offset, keyNode) {
       yaml = newYaml;
     }
   } else if (newJson.length > min) {
-    //移动到末尾
+    // 移动到末尾
 
     let tailYaml = yaml.substring(getNodeEndMark(ast).pointer + offset);
-    if(tailYaml && tailYaml.trimLeft().startsWith('#')){
+    if (tailYaml && tailYaml.trimLeft().startsWith('#')) {
       let arr = tailYaml.split(EOL);
-      for(let i = 0; i < arr.length; i++){
-        if(arr[i].trim() === ''){
-          offset+=1;
-        }else if(arr[i].trim().startsWith('#')){
+      for (let i = 0; i < arr.length; i++) {
+        if (arr[i].trim() === '') {
+          offset += arr[i].length + 1;
+        } else if (arr[i].trim().startsWith('#')) {
           offset += arr[i].length;
-        }else{
+        } else {
           break;
         }
       }
 
     }
     let insertValue;
-    if(ast.flow_style){
+    if (ast.flow_style) {
       insertValue = dumpJson(newJson.slice(min));
-      insertValue = insertValue.substring(1, insertValue.length-1);
-    }else{
+      insertValue = insertValue.substring(1, insertValue.length - 1);
+    } else {
       insertValue = cleanDump(newJson.slice(min));
     }
-    yaml = insertAfterNode(ast,insertValue , yaml, offset, keyNode, ast.flow_style);
+    yaml = insertAfterNode(ast, insertValue, yaml, offset, keyNode, ast.flow_style);
   }
 
   return yaml;
@@ -265,26 +266,26 @@ function updateMap(ast, newJson, json, yaml, offset, keyNode) {
       return;
     }
 
-    //新值不是undefined
-    let value = json[keyNode.value]; //老json的值
-    let newValue = newJson[keyNode.value]; //新json的值
+    // 新值不是undefined
+    let value = json[keyNode.value]; // 老json的值
+    let newValue = newJson[keyNode.value]; // 新json的值
 
-    //如果老值是普通值
-    //value为对象或者数组时，valNode.value都是数组
-    //valNode.value非数组，则说明是value是普通值：数字、字符串、布尔值
+    // 如果老值是普通值
+    // value为对象或者数组时，valNode.value都是数组
+    // valNode.value非数组，则说明是value是普通值：数字、字符串、布尔值
     if (newValue !== value && !isArray(valNode.value)) {
 
       let newYaml;
-      if(!isObject(newValue)){
-        //老值：普通值； 新值： 普通值
+      if (!isObject(newValue)) {
+        // 老值：普通值； 新值： 普通值
         newYaml = replacePrimitive(valNode, newValue, yaml, offset, keyNode);
-      }else if(isArray(newValue) && newValue.length === 0){
-        //老值：普通值； 新值： 空数组
+      } else if (isArray(newValue) && newValue.length === 0) {
+        // 老值：普通值； 新值： 空数组
         newYaml = replaceNewEmptyArray(valNode, newValue, yaml, offset, keyNode);
-      }else if(!isArray(newValue) && Object.keys(newValue).length === 0){
-        //老值：普通值； 新值： 空对象
+      } else if (!isArray(newValue) && Object.keys(newValue).length === 0) {
+        // 老值：普通值； 新值： 空对象
         newYaml = replaceNewEmptyObject(valNode, newValue, yaml, offset, keyNode);
-      }else{
+      } else {
         newYaml = replaceOldPrimitiveNewObject(valNode, newValue, yaml, offset, keyNode);
       }
 
@@ -297,33 +298,33 @@ function updateMap(ast, newJson, json, yaml, offset, keyNode) {
     // 老值是对象或者数组
     if (!isEqual(newValue, value) && isArray(valNode.value)) {
       let newYaml;
-      if(!isObject(newValue) && !isArray(newValue)){
-        //老值：对象/数组； 新值： 普通值
+      if (!isObject(newValue) && !isArray(newValue)) {
+        // 老值：对象/数组； 新值： 普通值
         newYaml = replaceOldObjectNewPrimitive(valNode, newValue, yaml, offset, keyNode);
-      }else if(isArray(newValue) && !isArray(value) || !isArray(newValue) && isArray(value)){
-        //新老值是对象或数组，但是格式不一样
-        if(isArray(newValue) && newValue.length === 0){
-           newYaml = replaceNewEmptyArray(valNode, newValue, yaml, offset, keyNode);
-        }else if(typeof newValue === 'object' && Object.keys(newValue).length ===0){
+      } else if (isArray(newValue) && !isArray(value) || !isArray(newValue) && isArray(value)) {
+        // 新老值是对象或数组，但是格式不一样
+        if (isArray(newValue) && newValue.length === 0) {
+          newYaml = replaceNewEmptyArray(valNode, newValue, yaml, offset, keyNode);
+        } else if (typeof newValue === 'object' && Object.keys(newValue).length === 0) {
           newYaml = replaceNewEmptyObject(valNode, newValue, yaml, offset, keyNode);
-        }else{
+        } else {
           newYaml = replaceNonPrimitive(valNode, newValue, yaml, offset, keyNode);
         }
-      }else if (isArray(newValue)) {
-        if(valNode.value.length === 0){
+      } else if (isArray(newValue)) {
+        if (valNode.value.length === 0) {
           newYaml = replaceNonPrimitive(valNode, newValue, yaml, offset, keyNode);
-        }else if(newValue.length === 0){
+        } else if (newValue.length === 0) {
           newYaml = replaceNewEmptyArray(valNode, newValue, yaml, offset, keyNode);
-        }else{
+        } else {
           newYaml = updateSeq(valNode, newValue, yaml, offset, keyNode);
         }
       } else {
-        //newValue是对象
-        if(valNode.value.length === 0){
+        // newValue是对象
+        if (valNode.value.length === 0) {
           newYaml = replaceNonPrimitive(valNode, newValue, yaml, offset, keyNode);
-        }else if(Object.keys(newValue).length === 0){
+        } else if (Object.keys(newValue).length === 0) {
           newYaml = replaceNewEmptyObject(valNode, newValue, yaml, offset, keyNode);
-        }else{
+        } else {
           newYaml = updateMap(valNode, newValue, value, yaml, offset, keyNode);
         }
       }
@@ -332,49 +333,49 @@ function updateMap(ast, newJson, json, yaml, offset, keyNode) {
       delete newJson[keyNode.value];
       return;
     }
+    delete newJson[keyNode.value];
   });
 
   // look for new items to add
-  each(newJson, (value, key)=> {
-
+  each(newJson, (value, key) => {
     if (isUndefined(json[key])) {
 
       let tailYaml = yaml.substring(getNodeEndMark(ast).pointer + offset);
-      if(tailYaml){
-        if(tailYaml.startsWith(']')){
-          for(let i = 0; i < tailYaml.length; i++){
+      if (tailYaml) {
+        if (tailYaml.startsWith(']')) {
+          for (let i = 0; i < tailYaml.length; i++) {
             offset++;
-            if(tailYaml[i]===']'){
+            if (tailYaml[i] === ']') {
               break;
             }
           }
         }
 
-        if(tailYaml.trimLeft().startsWith('#')){
+        if (tailYaml.trimLeft().startsWith('#')) {
           let arr = tailYaml.split(EOL);
           let count = 0;
-          for(let i = 0; i < arr.length; i++){
-            if(arr[i].trim() === ''){
-              offset+=2;
-              count++;
-            }else if(arr[i].trim().startsWith('#')){
+          for (let i = 0; i < arr.length; i++) {
+            if (arr[i].trim() === '') {
               offset += arr[i].length + 1;
               count++;
-            }else{
+            } else if (arr[i].trim().startsWith('#')) {
+              offset += arr[i].length + 1;
+              count++;
+            } else {
               break;
             }
           }
-          if(count >= 1){
+          if (count >= 1) {
             offset--;
           }
         }
       }
 
       let insertValue;
-      if(ast.flow_style){
+      if (ast.flow_style) {
         insertValue = dumpJson({[key]: value});
-        insertValue = insertValue.substring(1, insertValue.length-1);
-      }else{
+        insertValue = insertValue.substring(1, insertValue.length - 1);
+      } else {
         insertValue = cleanDump({[key]: value});
       }
 
@@ -387,31 +388,32 @@ function updateMap(ast, newJson, json, yaml, offset, keyNode) {
   return yaml;
 }
 
-function dumpJson(json){
+function dumpJson(json) {
   let str = '';
-  if(isArray(json)){
+  if (isArray(json)) {
     str += '[';
-    str += json.map(item =>{
-      if(isObject(item)){
-         return dumpJson(item);
+    str += json.map(item => {
+      if (isObject(item)) {
+        return dumpJson(item);
       }
       return item;
     }).join(', ');
     str += ']';
-  }else if(isObject(json)){
+  } else if (isObject(json)) {
     str = '{';
-    str += Object.keys(json).map(key =>{
-      if(isObject(json[key])){
+    str += Object.keys(json).map(key => {
+      if (isObject(json[key])) {
         return `${key}: ${dumpJson(json[key])}`;
       }
       return `${key}: ${json[key]}`;
     }).join(', ');
     str += '}';
-  }else{
+  } else {
     str += json;
   }
   return str;
 }
+
 /*
  * Place value in node range in yaml string
  *
@@ -422,14 +424,14 @@ function dumpJson(json){
  * @returns {string}
 */
 
-function findNodeEndMarkPoint(node, yaml, offset){
+function findNodeEndMarkPoint(node, yaml, offset) {
 
-  if([SEQ_TAG, MAP_TAG].includes(node.tag)){
+  if ([SEQ_TAG, MAP_TAG].includes(node.tag)) {
     let value = node.value;
-    if(value.length === 0){
+    if (value.length === 0) {
       return node.end_mark.pointer + offset;
     }
-    let lastValue = value[value.length-1];
+    let lastValue = value[value.length - 1];
     // if(node.tag === SEQ_TAG && isArray(lastValue.value)){
     //   return findNodeEndMarkPoint(lastValue, yaml, offset);
     // }else if(node.tag === MAP_TAG &&isArray(lastValue[1].value)){
@@ -437,12 +439,12 @@ function findNodeEndMarkPoint(node, yaml, offset){
     // }
     let point = node.tag === SEQ_TAG ? lastValue.end_mark.pointer : lastValue[1].end_mark.pointer;
 
-    let tailYaml = yaml.substring(point+offset);
-    if(tailYaml.startsWith('\n') || tailYaml.startsWith(EOL)){
+    let tailYaml = yaml.substring(point + offset);
+    if (tailYaml.startsWith('\n') || tailYaml.startsWith(EOL)) {
       return point + offset;
-    }else if(tailYaml.trimLeft().startsWith('#')){
+    } else if (tailYaml.trimLeft().startsWith('#')) {
       let componentLength = 0;
-      while (!['\n', EOL].includes(tailYaml[componentLength])){
+      while (!['\n', EOL].includes(tailYaml[componentLength])) {
         componentLength++;
       }
       return point + offset + componentLength + 1;
@@ -451,37 +453,38 @@ function findNodeEndMarkPoint(node, yaml, offset){
   return node.end_mark.pointer + offset;
 }
 
-function deleteObjectRow(keyNode, valNode, yaml, offset){
+function deleteObjectRow(keyNode, valNode, yaml, offset) {
   let newYaml = yaml.substr(0, keyNode.start_mark.pointer + offset);
 
-  //如果后面没有任何内容，只剩一个空行，则删除这个空行
+  // 如果后面没有任何内容，只剩一个空行，则删除这个空行
   let lineBreak = yaml[getNodeEndMark(valNode).pointer + offset] === '\n';
-  if(lineBreak){
-    newYaml = newYaml.trimRight() + '\n' + yaml.substring(getNodeEndMark(valNode).pointer + offset +1);
-  }else{
+  if (lineBreak) {
+    newYaml = newYaml.trimRight() + '\n' + yaml.substring(getNodeEndMark(valNode).pointer + offset + 1);
+  } else {
     let commentLength = 0;
     let tailYaml = yaml.substring(getNodeEndMark(valNode).pointer + offset);
-    if(tailYaml.trimLeft().startsWith('#')){
-      while (!['\n', EOL].includes(tailYaml[commentLength])){
+    if (tailYaml.trimLeft().startsWith('#')) {
+      while (!['\n', EOL].includes(tailYaml[commentLength])) {
         commentLength++;
       }
       newYaml += yaml.substring(getNodeEndMark(valNode).pointer + offset + commentLength + 1);
-    }else{
+    } else {
       newYaml += tailYaml;
     }
   }
   return newYaml;
 }
+
 // 新 空对象 老 非空对象
-function replaceNewEmptyObject(node, value, yaml, offset, parentKeyNode){
+function replaceNewEmptyObject(node, value, yaml, offset, parentKeyNode) {
   return yaml.substr(0, node.start_mark.pointer + offset).trimRight() + ' {}' + EOL +
       yaml.substring(findNodeEndMarkPoint(node, yaml, offset));
 }
 
 // 新 空数组 老 非空数组
-function replaceNewEmptyArray(node, value, yaml, offset, parentKeyNode){
-  let tailYaml= yaml.substring(findNodeEndMarkPoint(node, yaml, offset));
-  if(tailYaml && !['\n',EOL].includes(tailYaml[0])){
+function replaceNewEmptyArray(node, value, yaml, offset, parentKeyNode) {
+  let tailYaml = yaml.substring(findNodeEndMarkPoint(node, yaml, offset));
+  if (tailYaml && !['\n', EOL].includes(tailYaml[0])) {
     tailYaml = EOL + tailYaml;
   }
   return yaml.substr(0, node.start_mark.pointer + offset).trimRight() + ' []' +
@@ -490,7 +493,7 @@ function replaceNewEmptyArray(node, value, yaml, offset, parentKeyNode){
 
 
 // 新老都是非普通值
-function replaceNonPrimitive(node, value, yaml, offset, parentKeyNode){
+function replaceNonPrimitive(node, value, yaml, offset, parentKeyNode) {
   let defaultIndent = new Array(parentKeyNode.start_mark.column + 2).fill(' ').join('');
   let newValueYaml = cleanDump(value).split(EOL).map(item => `${defaultIndent}${item}`).join(EOL);
 
@@ -500,14 +503,14 @@ function replaceNonPrimitive(node, value, yaml, offset, parentKeyNode){
 }
 
 // 老 对象， 新普通值
-function replaceOldObjectNewPrimitive(node, value, yaml, offset, parentKeyNode){
-  return yaml.substr(0, node.start_mark.pointer + offset).trimRight() +' ' +
+function replaceOldObjectNewPrimitive(node, value, yaml, offset, parentKeyNode) {
+  return yaml.substr(0, node.start_mark.pointer + offset).trimRight() + ' ' +
       formatString(value, parentKeyNode) +
       yaml.substring(findNodeEndMarkPoint(node, yaml, offset));
 }
 
 // 老 普通值， 新对象
-function replaceOldPrimitiveNewObject(node, value, yaml, offset, parentKeyNode){
+function replaceOldPrimitiveNewObject(node, value, yaml, offset, parentKeyNode) {
   let defaultIndent = new Array(parentKeyNode.start_mark.column + 2).fill(' ').join('');
   let newValueYaml = cleanDump(value).split(EOL).map(item => `${defaultIndent}${item}`).join(EOL);
 
@@ -515,16 +518,17 @@ function replaceOldPrimitiveNewObject(node, value, yaml, offset, parentKeyNode){
       String(newValueYaml) +
       yaml.substring(findNodeEndMarkPoint(node, yaml, offset));
 }
+
 function replacePrimitive(node, value, yaml, offset, parentKeyNode) {
   return yaml.substr(0, node.start_mark.pointer + offset) + formatString(value, parentKeyNode) +
       yaml.substring(findNodeEndMarkPoint(node, yaml, offset));
 }
 
-function formatString(value, parentKeyNode){
-  if(typeof value === 'string' && value.includes('\n')){
+function formatString(value, parentKeyNode) {
+  if (typeof value === 'string' && value.includes('\n')) {
     let defaultIndent = parentKeyNode ?
         new Array(parentKeyNode.start_mark.column + 2).fill(' ').join('') : 2;
-     return '|-'+EOL + value.split('\n').map(item => `${defaultIndent}${item || ''}`).join(EOL);
+    return '|-' + EOL + value.split('\n').map(item => `${defaultIndent}${item || ''}`).join(EOL);
   }
   return String(value);
 }
@@ -539,14 +543,14 @@ function formatString(value, parentKeyNode){
  * @returns {string}
 */
 function replaceNode(node, value, yaml, offset) {
-  //原始yaml的缩进几个，新的yaml前面就加几个
+  // 原始yaml的缩进几个，新的yaml前面就加几个
   let indentedValue = indent(value, node.start_mark.column);
 
   let lineStart = node.start_mark.pointer - node.start_mark.column + offset;
 
   return yaml.substr(0, lineStart) +
-    indentedValue +
-    yaml.substring(getNodeEndMark(node).pointer + offset);
+      indentedValue +
+      yaml.substring(getNodeEndMark(node).pointer + offset);
 }
 
 /*
@@ -559,11 +563,11 @@ function replaceNode(node, value, yaml, offset) {
  * @returns {string}
 */
 function insertAfterNode(node, value, yaml, offset, keyNode, flowStyle) {
-  if(flowStyle){
+  if (flowStyle) {
     return yaml.substr(0, getNodeEndMark(node).pointer + offset) + ', ' +
         value +
         yaml.substring(getNodeEndMark(node).pointer + offset);
-  }else{
+  } else {
     let indentedValue = indent(value, node.start_mark.column);
 
     return yaml.substr(0, getNodeEndMark(node).pointer + offset) +
@@ -599,16 +603,16 @@ function removeArrayElement(node, yaml, offset) {
  * @returns {string}
 */
 function changeArrayElement(node, value, yaml, offset, parentNode, flowStyle) {
-  if(flowStyle){
+  if (flowStyle) {
     return yaml.substr(0, node.start_mark.pointer + offset) +
         String(value) +
         yaml.substring(getNodeEndMark(node).pointer + offset);
-  }else{
+  } else {
     let indentedValue;
-    if(typeof value === 'string' && value.includes('\n')){
+    if (typeof value === 'string' && value.includes('\n')) {
       indentedValue = new Array(node.start_mark.column).fill(' ').map(item => ' ').join('')
           + formatString(value, parentNode) + EOL;
-    }else{
+    } else {
       value = cleanDump(value);
       indentedValue = indent(value, node.start_mark.column);
     }
@@ -655,13 +659,13 @@ function getNodeEndMark(ast) {
  * @returns {string}
 */
 
-//给一个字符串str的每一行添加depth个空格前缀
+// 给一个字符串str的每一行添加depth个空格前缀
 function indent(str, depth) {
   return str
-    .split(EOL)
-    // .filter(line => line)
-    .map(line => repeat(SPACE, depth) + line)
-    .join(EOL);
+      .split(EOL)
+      // .filter(line => line)
+      .map(line => repeat(SPACE, depth) + line)
+      .join(EOL);
 }
 
 /*
@@ -672,7 +676,7 @@ function indent(str, depth) {
  * @returns {string}
  *
 */
-function cleanDump(value, options={}) {
+function cleanDump(value, options = {}) {
   let yaml = dump(value, options).replace(/\n$/, '');
 
   if (EOL !== '\n') {
