@@ -885,4 +885,39 @@ describe("setJson", () => {
         ].join('\n')
         expect(form2yaml.getYaml().trim()).toEqual(yaml)
     })
+    it("子属性后面有注释，子属性后面添加兄弟元素", ()=> {
+        let defaultYaml = [
+            'template:',
+            '  spec:',
+            '    volumes:',
+            '    # 集群已存在的configMap和secret"'
+        ].join('\n');
+        let form2yaml = new Form2Yaml(defaultYaml, {
+            nonMergeableKeys: ['spec.containers', 'spec.initContainers']
+        })
+        form2yaml.setJson({
+            template: {
+                "spec": {
+                    b: 1
+                },
+            },
+            "strategy": {
+                "type": "RollingUpdate",
+                "rollingUpdate": {}
+            }
+        })
+
+        let expectYaml = [
+            'template:',
+            '  spec:',
+            '    volumes:',
+            '    # 集群已存在的configMap和secret"',
+            '    b: 1',
+            'strategy:',
+            '  type: RollingUpdate',
+            '  rollingUpdate: {}'
+        ].join('\n')
+
+        expect(form2yaml.getYaml().trim()).toEqual(expectYaml)
+    })
 })

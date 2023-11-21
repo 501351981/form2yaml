@@ -217,7 +217,18 @@ function updateSeq(ast, newJson, yaml, offset, keyNode) {
   } else if (newJson.length > min) {
     // 移动到末尾
 
-    let tailYaml = yaml.substring(getNodeEndMark(ast).pointer + offset);
+    let tailYaml = yaml.substring(ast.end_mark.pointer + offset);
+
+    if(ast.flow_style){
+      while(yaml[ast.end_mark.pointer + offset] !== ']'){
+        offset--;
+      }
+    }else{
+      if(yaml[ast.end_mark.pointer + offset] !== EOL && yaml[ast.end_mark.pointer + offset -1] === EOL){
+        offset--;
+      }
+    }
+
     if (tailYaml && tailYaml.trimLeft().startsWith('#')) {
       let arr = tailYaml.split(EOL);
       for (let i = 0; i < arr.length; i++) {
@@ -340,7 +351,17 @@ function updateMap(ast, newJson, json, yaml, offset, keyNode) {
   each(newJson, (value, key) => {
     if (isUndefined(json[key])) {
 
-      let tailYaml = yaml.substring(getNodeEndMark(ast).pointer + offset);
+      let tailYaml = yaml.substring(ast.end_mark.pointer + offset);
+      if(ast.flow_style){
+        while(yaml[ast.end_mark.pointer + offset] !== '}'){
+          offset--;
+        }
+      }else{
+        if(yaml[ast.end_mark.pointer + offset] !== EOL && yaml[ast.end_mark.pointer + offset -1] === EOL){
+          offset--;
+        }
+      }
+
       if (tailYaml) {
         if (tailYaml.startsWith(']')) {
           for (let i = 0; i < tailYaml.length; i++) {
@@ -564,16 +585,16 @@ function replaceNode(node, value, yaml, offset) {
 */
 function insertAfterNode(node, value, yaml, offset, keyNode, flowStyle) {
   if (flowStyle) {
-    return yaml.substr(0, getNodeEndMark(node).pointer + offset) + ', ' +
+    return yaml.substr(0, node.end_mark.pointer + offset) + ', ' +
         value +
-        yaml.substring(getNodeEndMark(node).pointer + offset);
+        yaml.substring(node.end_mark.pointer + offset);
   } else {
     let indentedValue = indent(value, node.start_mark.column);
 
-    return yaml.substr(0, getNodeEndMark(node).pointer + offset) +
+    return yaml.substr(0, node.end_mark.pointer + offset) +
         EOL +
         indentedValue +
-        yaml.substring(getNodeEndMark(node).pointer + offset);
+        yaml.substring(node.end_mark.pointer + offset);
   }
 
 }
