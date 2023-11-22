@@ -920,4 +920,46 @@ describe("setJson", () => {
 
         expect(form2yaml.getYaml().trim()).toEqual(expectYaml)
     })
+    it("子属性结尾处增加空对象，其中数组数量发生变化", ()=> {
+        let defaultYaml = [
+            'template:',
+            '  metadata:',
+            '    labels:',
+            '      a:',
+            '      - 1',
+            '  spec:',
+            '    restartPolicy: Always'
+        ].join('\n');
+        let form2yaml = new Form2Yaml(defaultYaml, {
+        })
+        form2yaml.setJson({
+            template: {
+                "metadata": {
+                    labels:{
+                        a: [1,2]
+                    },
+                    annotations: {}
+                },
+                spec:{
+                    restartPolicy: 'Always'
+                }
+            },
+
+        })
+
+
+        let expectYaml = [
+            'template:',
+            '  metadata:',
+            '    labels:',
+            '      a:',
+            '      - 1',
+            '      - 2',
+            '    annotations: {}',
+            '  spec:',
+            '    restartPolicy: Always'
+        ].join('\n')
+
+        expect(form2yaml.getYaml().trim()).toEqual(expectYaml)
+    })
 })

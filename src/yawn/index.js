@@ -219,13 +219,16 @@ function updateSeq(ast, newJson, yaml, offset, keyNode) {
 
     let tailYaml = yaml.substring(ast.end_mark.pointer + offset);
 
-    if(ast.flow_style){
-      while(yaml[ast.end_mark.pointer + offset] !== ']'){
+    if (ast.flow_style) {
+      while (yaml[ast.end_mark.pointer + offset] !== ']') {
         offset--;
       }
-    }else{
-      if(yaml[ast.end_mark.pointer + offset] !== EOL && yaml[ast.end_mark.pointer + offset -1] === EOL){
+    } else {
+      if (yaml[ast.end_mark.pointer + offset] !== EOL && ast.end_mark.pointer + offset < yaml.length) {
         offset--;
+        while (ast.end_mark.pointer + offset >= 0 && yaml[ast.end_mark.pointer + offset] === ' ') {
+          offset--;
+        }
       }
     }
 
@@ -351,27 +354,21 @@ function updateMap(ast, newJson, json, yaml, offset, keyNode) {
   each(newJson, (value, key) => {
     if (isUndefined(json[key])) {
 
-      let tailYaml = yaml.substring(ast.end_mark.pointer + offset);
-      if(ast.flow_style){
-        while(yaml[ast.end_mark.pointer + offset] !== '}'){
+      if (ast.flow_style) {
+        while (yaml[ast.end_mark.pointer + offset] !== '}') {
           offset--;
         }
-      }else{
-        if(yaml[ast.end_mark.pointer + offset] !== EOL && yaml[ast.end_mark.pointer + offset -1] === EOL){
+      } else {
+        if (yaml[ast.end_mark.pointer + offset] !== EOL && ast.end_mark.pointer + offset < yaml.length) {
           offset--;
-        }
-      }
-
-      if (tailYaml) {
-        if (tailYaml.startsWith(']')) {
-          for (let i = 0; i < tailYaml.length; i++) {
-            offset++;
-            if (tailYaml[i] === ']') {
-              break;
-            }
+          while (ast.end_mark.pointer + offset >= 0 && yaml[ast.end_mark.pointer + offset] === ' ') {
+            offset--;
           }
         }
+      }
+      let tailYaml = yaml.substring(ast.end_mark.pointer + offset);
 
+      if (tailYaml) {
         if (tailYaml.trimLeft().startsWith('#')) {
           let arr = tailYaml.split(EOL);
           let count = 0;
