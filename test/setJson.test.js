@@ -962,4 +962,229 @@ describe("setJson", () => {
 
         expect(form2yaml.getYaml().trim()).toEqual(expectYaml)
     })
+
+    it("子属性结尾处增加空对象，其中数组数量发生变化", ()=> {
+        let defaultYaml = [
+            'spec:',
+            '  args:',
+            '    - |',
+            '      a',
+            '      a',
+            '      a',
+            '  env: 1'
+        ].join('\n');
+        let form2yaml = new Form2Yaml(defaultYaml, {
+            mergeJsonOfYaml: false
+        })
+        form2yaml.setJson({
+            spec: {
+                env: 1
+            }
+        })
+
+
+        let expectYaml = [
+            'spec:',
+            // '  args: []',
+            '  env: 1'
+        ].join('\n')
+
+        expect(form2yaml.getYaml().trim()).toEqual(expectYaml)
+    })
+    it("子属性结尾处增加空对象，其中数组数量发生变化", ()=> {
+        let defaultYaml = [
+            'spec:',
+            '  args:',
+            '    - |',
+            '      a',
+            '      a',
+            '      a',
+            '  env: 1'
+        ].join('\n');
+        let form2yaml = new Form2Yaml(defaultYaml, {
+            mergeJsonOfYaml: false
+        })
+        form2yaml.setJson({
+            spec: {
+                args: [],
+                env: 1
+            }
+        })
+
+
+        let expectYaml = [
+            'spec:',
+            '  args: []',
+            '  env: 1'
+        ].join('\n')
+
+        expect(form2yaml.getYaml().trim()).toEqual(expectYaml)
+    })
+
+    it(">-长字符串", ()=> {
+        let defaultYaml = [
+            'a:',
+            '  b: >-',
+            '    ddd',
+            'c: 1'
+        ].join('\n');
+        let form2yaml = new Form2Yaml(defaultYaml, {
+            mergeJsonOfYaml: false
+        })
+        form2yaml.setJson({
+            a: {
+                b: 'sss',
+            },
+            c: 1
+        })
+
+
+        let expectYaml = [
+            'a:',
+            '  b: sss',
+            'c: 1'
+        ].join('\n')
+        expect(form2yaml.getYaml().trim()).toEqual(expectYaml)
+    })
+    it("删除数组中一个值", ()=> {
+        let defaultYaml = [
+            'a:',
+            '  - b: 1',
+            '  - c: 1',
+            'd: 1'
+        ].join('\n');
+        let form2yaml = new Form2Yaml(defaultYaml, {
+            mergeJsonOfYaml: false
+        })
+        form2yaml.setJson({
+            a: [
+                {
+                    b: 1
+                }
+            ],
+            d: 1
+        })
+
+
+        let expectYaml = [
+            'a:',
+            '  - b: 1',
+            'd: 1'
+        ].join('\n')
+
+        expect(form2yaml.getYaml().trim()).toEqual(expectYaml)
+    })
+    it("删除行内数组中一个值", ()=> {
+        let defaultYaml = [
+            'a: [{b: 1}, {c: 1}]',
+            'd: 1'
+        ].join('\n');
+        let form2yaml = new Form2Yaml(defaultYaml, {
+            mergeJsonOfYaml: false
+        })
+        form2yaml.setJson({
+            a: [
+                {
+                    b: 1
+                }
+            ],
+            d: 1
+        })
+
+
+        let expectYaml = [
+            'a: [{b: 1}]',
+            'd: 1'
+        ].join('\n')
+
+        expect(form2yaml.getYaml().trim()).toEqual(expectYaml)
+    })
+    it("删除行内对象中一个值", ()=> {
+        let defaultYaml = [
+            'a: {b: 1, c: 2} #test',
+            'd: 1'
+        ].join('\n');
+        let form2yaml = new Form2Yaml(defaultYaml, {
+            mergeJsonOfYaml: false
+        })
+        form2yaml.setJson({
+            a: {
+                b: 1
+            },
+            d: 1
+        })
+
+
+        let expectYaml = [
+            'a: {b: 1} #test',
+            'd: 1'
+        ].join('\n')
+
+        expect(form2yaml.getYaml().trim()).toEqual(expectYaml)
+    })
+    it("删除数组中一个值", ()=> {
+        let defaultYaml = [
+            'a:',
+            '  a1:',
+            '    - b: 1',
+            '    - c: 1',
+            '  d: 1'
+        ].join('\n');
+        let form2yaml = new Form2Yaml(defaultYaml, {
+            mergeJsonOfYaml: false
+        })
+        form2yaml.setJson({
+            a:  {
+                a1: [
+                    {
+                        b: 1
+                    }
+                ],
+                d: 1
+            }
+        })
+
+
+        let expectYaml = [
+            'a:',
+            '  a1:',
+            '    - b: 1',
+            '  d: 1'
+        ].join('\n')
+
+        expect(form2yaml.getYaml().trim()).toEqual(expectYaml)
+    })
+    it("删除数组中全部值", ()=> {
+        let defaultYaml = [
+            'a:',
+            '  a1:',
+            '    - name: 1',
+            '      env:',
+            '        - b: 1',
+            '        - c: 1',
+            '  d: 1'
+        ].join('\n');
+        let form2yaml = new Form2Yaml(defaultYaml, {
+            mergeJsonOfYaml: false
+        })
+        form2yaml.setJson({
+            a:  {
+                a1: [
+                    {
+                        name: 1
+                    }
+                ],
+                d: 1
+            }
+        })
+
+
+        let expectYaml = [
+            'a:',
+            '  a1:',
+            '    - name: 1',
+            '  d: 1'
+        ].join('\n')
+        expect(form2yaml.getYaml().trim()).toEqual(expectYaml)
+    })
 })

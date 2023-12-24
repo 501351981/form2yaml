@@ -176,6 +176,9 @@ function getTag(json) {
  *
 */
 function updateSeq(ast, newJson, yaml, offset, keyNode) {
+  if (ast.flow_style) {
+    return replaceFlowStyle(ast, newJson, yaml, offset, ast);
+  }
   let values = load(serialize(ast));
   let min = Math.min(values.length, newJson.length);
   for (let i = 0; i < min; i++) {
@@ -269,6 +272,9 @@ function updateSeq(ast, newJson, yaml, offset, keyNode) {
  * @throws {YAWNError} - if json has weird type
 */
 function updateMap(ast, newJson, json, yaml, offset, keyNode) {
+  if (ast.flow_style) {
+    return replaceFlowStyle(ast, newJson, yaml, offset, ast);
+  }
   // look for changes
   each(ast.value, pair => {
     let [keyNode, valNode] = pair;
@@ -442,73 +448,109 @@ function dumpJson(json) {
  * @returns {string}
 */
 
-function findNodeEndMarkPoint(node, yaml, offset) {
-
-  if ([SEQ_TAG, MAP_TAG].includes(node.tag)) {
-    let value = node.value;
-    if (value.length === 0) {
-      return node.end_mark.pointer + offset;
+function findNodeEndMarkPoint(node, yaml, offset, comment = false) {
+  // 找到某个节点的结束位置
+  if (yaml[node.end_mark.pointer + offset] === '\n' || yaml[node.end_mark.pointer + offset] === EOL) {
+    return node.end_mark.pointer + offset;
+  }
+  if (yaml[node.end_mark.pointer + offset - 1] === '\n') {
+    return node.end_mark.pointer + offset - 1;
+  }
+  let spaceCount = 1;
+  if (yaml[node.end_mark.pointer + offset - 1] === ' ') {
+    while (node.end_mark.pointer + offset - spaceCount >= 0
+    && yaml[node.end_mark.pointer + offset - spaceCount] === ' ') {
+      spaceCount++;
     }
-    let lastValue = value[value.length - 1];
-    // if(node.tag === SEQ_TAG && isArray(lastValue.value)){
-    //   return findNodeEndMarkPoint(lastValue, yaml, offset);
-    // }else if(node.tag === MAP_TAG &&isArray(lastValue[1].value)){
-    //   return findNodeEndMarkPoint(lastValue[1], yaml, offset);
-    // }
-    let point = node.tag === SEQ_TAG ? lastValue.end_mark.pointer : lastValue[1].end_mark.pointer;
-
-    let tailYaml = yaml.substring(point + offset);
-    if (tailYaml.startsWith('\n') || tailYaml.startsWith(EOL)) {
-      return point + offset;
-    } else if (tailYaml.trimLeft().startsWith('#')) {
-      let componentLength = 0;
-      while (!['\n', EOL].includes(tailYaml[componentLength])) {
-        componentLength++;
-      }
-      return point + offset + componentLength + 1;
+    if (yaml[node.end_mark.pointer + offset - spaceCount] === '\n') {
+      return node.end_mark.pointer + offset - spaceCount;
     }
   }
+
+  let commentLength = 0;
+  if (comment) {
+    // 可能因为有注释，导致结尾没有换行符，需要把注释去掉
+    while (yaml[node.end_mark.pointer + offset + commentLength] !== '\n'
+    && yaml[node.end_mark.pointer + offset + commentLength] !== undefined) {
+      commentLength++;
+    }
+    return node.end_mark.pointer + offset + commentLength;
+  }
   return node.end_mark.pointer + offset;
+
+  // if ([SEQ_TAG, MAP_TAG].includes(node.tag)) {
+  //     let value = node.value;
+  //     if (value.length === 0) {
+  //         return node.end_mark.pointer + offset;
+  //     }
+  //     let lastValue = value[value.length - 1];
+  //     // 最后一个子元素所在位置
+  //     let point = node.tag === SEQ_TAG ? lastValue.end_mark.pointer : lastValue[1].end_mark.pointer;
+  //
+  //     let tailYaml = yaml.substring(point + offset);
+  //     if (tailYaml.startsWith('\n') || tailYaml.startsWith(EOL)) {
+  //         return point + offset;
+  //     } else if (tailYaml.trimLeft().startsWith('#')) {
+  //         let componentLength = 0;
+  //         while (!['\n', EOL].includes(tailYaml[componentLength])) {
+  //             componentLength++;
+  //         }
+  //         return point + offset + componentLength + 1;
+  //     }
+  // }
+
 }
 
 function deleteObjectRow(keyNode, valNode, yaml, offset) {
-  let newYaml = yaml.substr(0, keyNode.start_mark.pointer + offset);
-
-  // 如果后面没有任何内容，只剩一个空行，则删除这个空行
-  let lineBreak = yaml[getNodeEndMark(valNode).pointer + offset] === '\n';
-  if (lineBreak) {
-    newYaml = newYaml.trimRight() + '\n' + yaml.substring(getNodeEndMark(valNode).pointer + offset + 1);
-  } else {
-    let commentLength = 0;
-    let tailYaml = yaml.substring(getNodeEndMark(valNode).pointer + offset);
-    if (tailYaml.trimLeft().startsWith('#')) {
-      while (!['\n', EOL].includes(tailYaml[commentLength])) {
-        commentLength++;
-      }
-      newYaml += yaml.substring(getNodeEndMark(valNode).pointer + offset + commentLength + 1);
-    } else {
-      newYaml += tailYaml;
-    }
+  let index = keyNode.start_mark.pointer - keyNode.start_mark.column - 1 + offset;
+  let endIndex = findNodeEndMarkPoint(valNode, yaml, offset, true) - 1;
+  if (yaml[endIndex] !== '\n') {
+    return yaml.substr(0, index) +
+        yaml.substring(endIndex + 1);
   }
-  return newYaml;
+  return yaml.substr(0, index) +
+      yaml.substring(endIndex);
+
+
+  // let newYaml = yaml.substr(0, keyNode.start_mark.pointer + offset);
+  //
+  // // 如果后面没有任何内容，只剩一个空行，则删除这个空行
+  // let lineBreak = yaml[getNodeEndMark(valNode).pointer + offset] === '\n';
+  // if (lineBreak) {
+  //     newYaml = newYaml.trimRight() + '\n' + yaml.substring(getNodeEndMark(valNode).pointer + offset + 1);
+  // } else {
+  //     let commentLength = 0;
+  //     let tailYaml = yaml.substring(getNodeEndMark(valNode).pointer + offset);
+  //     if (tailYaml.trimLeft().startsWith('#')) {
+  //         while (!['\n', EOL].includes(tailYaml[commentLength])) {
+  //             commentLength++;
+  //         }
+  //         newYaml += yaml.substring(getNodeEndMark(valNode).pointer + offset + commentLength + 1);
+  //     } else {
+  //         newYaml += tailYaml;
+  //     }
+  // }
+  // return newYaml;
 }
 
 // 新 空对象 老 非空对象
 function replaceNewEmptyObject(node, value, yaml, offset, parentKeyNode) {
-  return yaml.substr(0, node.start_mark.pointer + offset).trimRight() + ' {}' + EOL +
+  return yaml.substr(0, node.start_mark.pointer + offset).trimRight() + ' {}' +
       yaml.substring(findNodeEndMarkPoint(node, yaml, offset));
 }
 
 // 新 空数组 老 非空数组
 function replaceNewEmptyArray(node, value, yaml, offset, parentKeyNode) {
+
   let tailYaml = yaml.substring(findNodeEndMarkPoint(node, yaml, offset));
-  if (tailYaml && !['\n', EOL].includes(tailYaml[0])) {
-    tailYaml = EOL + tailYaml;
-  }
   return yaml.substr(0, node.start_mark.pointer + offset).trimRight() + ' []' +
       tailYaml;
 }
 
+function replaceFlowStyle(node, value, yaml, offset, parentKeyNode) {
+  return yaml.substr(0, node.start_mark.pointer + offset) + dumpJson(value) +
+      yaml.substring(getNodeEndMark(node).pointer + offset);
+}
 
 // 新老都是非普通值
 function replaceNonPrimitive(node, value, yaml, offset, parentKeyNode) {
@@ -538,8 +580,10 @@ function replaceOldPrimitiveNewObject(node, value, yaml, offset, parentKeyNode) 
 }
 
 function replacePrimitive(node, value, yaml, offset, parentKeyNode) {
-  return yaml.substr(0, node.start_mark.pointer + offset) + formatString(value, parentKeyNode) +
-      yaml.substring(findNodeEndMarkPoint(node, yaml, offset));
+  let start = yaml.substr(0, node.start_mark.pointer + offset);
+  let middle = formatString(value, parentKeyNode);
+  let end = yaml.substring(findNodeEndMarkPoint(node, yaml, offset));
+  return start + middle + end;
 }
 
 function formatString(value, parentKeyNode) {
@@ -608,7 +652,7 @@ function removeArrayElement(node, yaml, offset) {
   let index = node.start_mark.pointer - node.start_mark.column - 1 + offset;
 
   return yaml.substr(0, index) +
-      yaml.substring(getNodeEndMark(node).pointer + offset);
+      yaml.substring(findNodeEndMarkPoint(node, yaml, offset, true));
 }
 
 /*
@@ -655,16 +699,6 @@ function changeArrayElement(node, value, yaml, offset, parentNode, flowStyle) {
  * @returns {Mark}
 */
 function getNodeEndMark(ast) {
-  if (isArray(ast.value) && ast.value.length) {
-    let lastItem = last(ast.value);
-
-    if (isArray(lastItem) && lastItem.length) {
-      return getNodeEndMark(last(lastItem));
-    }
-
-    return getNodeEndMark(lastItem);
-  }
-
   return ast.end_mark;
 }
 
