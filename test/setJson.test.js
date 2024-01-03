@@ -1187,4 +1187,52 @@ describe("setJson", () => {
         ].join('\n')
         expect(form2yaml.getYaml().trim()).toEqual(expectYaml)
     })
+
+    it("->格式替换新值", ()=> {
+        let defaultYaml = [
+            'spec:',
+            '  template:',
+            '    spec:',
+            '      containers:',
+            '        - name: ',
+            '          command:',
+            '            - >-',
+            '              ssssss',
+            '    metadata: 1'
+        ].join('\n');
+
+        let form2yaml = new Form2Yaml(defaultYaml, {
+            mergeJsonOfYaml: false
+        })
+        form2yaml.setJson({
+            spec: {
+                template:{
+                    spec:{
+                        containers: [
+                            {
+                                name: '',
+                                command: [
+                                    'aaa'
+                                ]
+                            }
+                        ]
+                    },
+                    metadata: 1
+                }
+            }
+        })
+
+
+        let expectYaml = [
+            'spec:',
+            '  template:',
+            '    spec:',
+            '      containers:',
+            '        - name:',
+            '          command:',
+            '            - aaa',
+            '    metadata: 1'
+        ].join('\n')
+        expect(form2yaml.getYaml().trim()).toEqual(expectYaml)
+    })
 })

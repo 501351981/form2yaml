@@ -673,20 +673,15 @@ function changeArrayElement(node, value, yaml, offset, parentNode, flowStyle) {
     let indentedValue;
     if (typeof value === 'string' && value.includes('\n')) {
       indentedValue = new Array(node.start_mark.column).fill(' ').map(item => ' ').join('')
-          + formatString(value, parentNode) + EOL;
+          + formatString(value, parentNode);
     } else {
       value = cleanDump(value);
       indentedValue = indent(value, node.start_mark.column);
     }
 
-    let index = node.start_mark.pointer + offset;
-    while (index > 0 && yaml[index] !== DASH) {
-      index--;
-    }
-
-    return yaml.substr(0, index + 2) +
+    return yaml.substr(0, node.start_mark.pointer + offset) +
         indentedValue.substr(node.start_mark.column) +
-        yaml.substring(getNodeEndMark(node).pointer + offset);
+        yaml.substring(findNodeEndMarkPoint(node, yaml, offset));
   }
 
 }
